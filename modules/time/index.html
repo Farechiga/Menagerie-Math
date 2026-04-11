@@ -475,7 +475,9 @@
         timeEntry.classList.remove('hidden');
       } else if (type === 'B') {
         const target = sampleTime();
-        const display = { hour: 12, minute: 0 };
+        // Start at 12:55 instead of 12:00 so the two hands don't overlap
+        // — the minute hand points at 11 and the hour hand sits just past 12.
+        const display = { hour: 12, minute: 55 };
         currentRound = { type, target, display };
         setPrompt(`Set the clock to&nbsp;<strong>${formatPromptB(target)}</strong>`);
         answerInput.classList.add('hidden');

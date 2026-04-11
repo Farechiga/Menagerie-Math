@@ -8,6 +8,8 @@
 // encoded spaces (iCloud paths) can fail to load even when the file
 // exists, while page-relative paths always resolve correctly.
 const REWARDS_BASE = (function () {
+  // Strategy 1: read the raw src from document.currentScript (available
+  // during the initial synchronous script execution).
   try {
     const script = document.currentScript;
     if (script) {
@@ -15,7 +17,7 @@ const REWARDS_BASE = (function () {
       if (raw) return raw.replace(/shared\/rewards\.js(\?.*)?$/, '');
     }
   } catch (e) {}
-  // Fallback: scan all script tags for rewards.js
+  // Strategy 2: scan every script tag on the page for rewards.js.
   try {
     const tags = document.querySelectorAll('script[src]');
     for (const t of tags) {
@@ -24,6 +26,14 @@ const REWARDS_BASE = (function () {
         return raw.replace(/shared\/rewards\.js(\?.*)?$/, '');
       }
     }
+  } catch (e) {}
+  // Strategy 3: infer depth from the current page pathname. Works for
+  // file:// and http:// regardless of how the page was loaded.
+  try {
+    const p = location.pathname;
+    if (/\/modules\/[^/]+\/[^/]*$/.test(p)) return '../../';
+    if (/\/menagerie\/[^/]*$/.test(p)) return '../';
+    return '';
   } catch (e) {}
   return '';
 })();
@@ -253,18 +263,16 @@ const Rewards = {
     frame.style.boxShadow = 'var(--shadow-md)';
 
     const img = document.createElement('img');
-    img.src = `../assets/Animal_Pictures/${filename}`;
+    img.src = animalImageURL(filename);
     img.alt = animalNameFromFilename(filename);
     img.style.width = '100%';
     img.style.height = '100%';
-    img.style.objectFit = 'cover';
+    img.style.objectFit = 'contain';
     img.style.display = 'block';
+    img.onerror = function () {
+      console.error('[Rewards] showDirectCard failed to load:', this.src);
+    };
     frame.appendChild(img);
-
-    const name = document.createElement('p');
-    name.style.fontWeight = '800';
-    name.style.fontSize = 'var(--text-lg)';
-    name.textContent = animalNameFromFilename(filename);
 
     const growth = document.createElement('p');
     growth.className = 'feedback feedback--growth fade-in-up';
@@ -272,7 +280,6 @@ const Rewards = {
 
     modal.appendChild(title);
     modal.appendChild(frame);
-    modal.appendChild(name);
     modal.appendChild(growth);
     backdrop.appendChild(modal);
     document.body.appendChild(backdrop);

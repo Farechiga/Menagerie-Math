@@ -141,7 +141,7 @@
     .tile__badge--locked   { background: var(--lock-gray);    color: var(--ink-soft); }
     .tile__badge--progress { background: var(--teal);         color: var(--white); }
     .tile__badge--complete {
-      background: var(--gold);
+      background: var(--teal);
       color: var(--white);
       width: 36px;
       height: 36px;
@@ -171,6 +171,46 @@
       z-index: 200;
     }
 
+    /* Subtle "New game" reset link at the very bottom of the page */
+    .portal-footer {
+      width: 100%;
+      max-width: 720px;
+      margin: var(--space-10) auto var(--space-4);
+      display: flex;
+      justify-content: center;
+    }
+    #new-game-btn {
+      background: transparent;
+      border: none;
+      color: var(--ink-faint);
+      font-family: inherit;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      cursor: pointer;
+      padding: var(--space-2) var(--space-4);
+      text-decoration: underline;
+      text-decoration-color: var(--line);
+      text-underline-offset: 3px;
+      transition: color var(--transition-fast);
+      opacity: 0.55;
+    }
+    #new-game-btn:hover {
+      color: var(--ink-soft);
+      opacity: 1;
+    }
+
+    /* PIN modal input */
+    #reset-pin {
+      max-width: 180px;
+      letter-spacing: 0.35em;
+      margin: var(--space-4) auto 0;
+    }
+    #reset-error {
+      display: none;
+      margin-top: var(--space-3);
+    }
+    #reset-error.visible { display: inline-block; }
+
     .page { position: relative; z-index: 1; }
   </style>
 </head>
@@ -196,6 +236,10 @@
         <div class="progress__fill" id="overall-progress-fill" style="width: 0%;"></div>
       </div>
     </div>
+
+    <div class="portal-footer">
+      <button type="button" id="new-game-btn">New game</button>
+    </div>
   </main>
 
   <canvas id="confetti-canvas"></canvas>
@@ -214,35 +258,19 @@
 
     const POINTS_PER_MODULE = 10;
 
-    function activeModuleKey(state) {
-      for (const m of MODULES) {
-        const s = state.modules[m.key];
-        if (s.points > 0 && !s.complete) return m.key;
-      }
-      return null;
-    }
-
     function renderTiles() {
       const state = State.get();
       const grid = document.getElementById('module-grid');
       grid.innerHTML = '';
 
-      const active = activeModuleKey(state);
-
       MODULES.forEach(m => {
         const s = state.modules[m.key];
-        const isActive = active === m.key;
         const isComplete = s.complete;
-        const isInProgress = isActive && !isComplete;
-        const isLocked = active !== null && !isActive && !isComplete;
+        const isInProgress = !isComplete && s.points > 0;
 
-        const tile = document.createElement(isLocked ? 'div' : 'a');
-        tile.className = 'tile' + (isLocked ? ' tile--locked' : '');
-        if (!isLocked) {
-          tile.href = m.href;
-        } else {
-          tile.setAttribute('aria-disabled', 'true');
-        }
+        const tile = document.createElement('a');
+        tile.className = 'tile';
+        tile.href = m.href;
         tile.setAttribute('aria-label', m.name);
 
         const img = document.createElement('img');
@@ -251,12 +279,7 @@
         img.alt = m.name;
         tile.appendChild(img);
 
-        if (isLocked) {
-          const badge = document.createElement('span');
-          badge.className = 'tile__badge tile__badge--locked';
-          badge.innerHTML = '&#128274; Locked';
-          tile.appendChild(badge);
-        } else if (isComplete) {
+        if (isComplete) {
           const badge = document.createElement('span');
           badge.className = 'tile__badge tile__badge--complete';
           badge.setAttribute('aria-label', 'Complete');
@@ -333,6 +356,80 @@
         document.body.removeChild(backdrop);
       });
     }
+
+    // --- New game (PIN-protected reset) ---
+    const NEW_GAME_PIN = '6970';
+
+    function openNewGameModal() {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <h2 class="modal__title">Start a new game?</h2>
+        <p class="text-soft">This clears all progress and empties the menagerie.<br>Enter the 4-digit PIN to continue.</p>
+        <input
+          type="text"
+          id="reset-pin"
+          class="input input--digit"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="4"
+          autocomplete="off"
+          aria-label="PIN"
+          placeholder="••••"
+        >
+        <div id="reset-error" class="feedback feedback--wrong">Wrong PIN — try again</div>
+        <div class="row" style="justify-content: center; gap: var(--space-3); margin-top: var(--space-5);">
+          <button type="button" class="btn btn--ghost btn--sm" id="reset-cancel">Cancel</button>
+          <button type="button" class="btn btn--primary btn--sm" id="reset-confirm">Start new game</button>
+        </div>
+      `;
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+
+      const pinInput = modal.querySelector('#reset-pin');
+      const errorEl  = modal.querySelector('#reset-error');
+      const confirm  = modal.querySelector('#reset-confirm');
+      const cancel   = modal.querySelector('#reset-cancel');
+
+      setTimeout(() => pinInput.focus(), 0);
+
+      function close() {
+        if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+        document.removeEventListener('keydown', onKey);
+      }
+      function onKey(e) { if (e.key === 'Escape') close(); }
+
+      function submit() {
+        if (pinInput.value.trim() === NEW_GAME_PIN) {
+          try { localStorage.removeItem('mathPortalState'); } catch (e) {}
+          location.reload();
+        } else {
+          errorEl.classList.add('visible');
+          pinInput.classList.remove('shake');
+          void pinInput.offsetWidth;
+          pinInput.classList.add('shake');
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      }
+
+      pinInput.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        errorEl.classList.remove('visible');
+      });
+      pinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+      });
+      confirm.addEventListener('click', submit);
+      cancel.addEventListener('click', close);
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+      document.addEventListener('keydown', onKey);
+    }
+
+    document.getElementById('new-game-btn').addEventListener('click', openNewGameModal);
 
     renderTiles();
     renderOverallProgress();

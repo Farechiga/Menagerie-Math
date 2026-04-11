@@ -72,6 +72,12 @@
       font-weight: 700;
     }
 
+    /* Override .page's align-items: center locally so flex children
+       stretch to the full cross axis — then each uses its own max-width
+       to cap and margin: 0 auto to center. This makes sure #main-content
+       actually fills the available horizontal space. */
+    main.page { align-items: stretch; }
+
     #main-content {
       width: 100%;
       max-width: 960px;
@@ -80,12 +86,12 @@
     .card-grid {
       width: 100%;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: var(--space-6);
     }
     @media (max-width: 720px) {
       .card-grid {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         gap: var(--space-5);
       }
     }
@@ -94,10 +100,6 @@
         grid-template-columns: repeat(2, 1fr);
         gap: var(--space-4);
       }
-    }
-
-    .slot__name {
-      font-size: var(--text-base);
     }
 
     .slot {
