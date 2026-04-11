@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Telling</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .page { position: relative; z-index: 1; }
+
+    .module-header {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto var(--space-5);
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .module-header__icon {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+    .module-header__title {
+      font-size: var(--text-xl);
+      font-weight: 900;
+      margin: 0;
+    }
+    .points-badge {
+      background: var(--teal);
+      color: var(--white);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      font-size: var(--text-base);
+      box-shadow: var(--shadow-sm);
+    }
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-full);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: var(--text-lg);
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+    .icon-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--magenta);
+      text-decoration: none;
+    }
+    .icon-btn img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+
+    #game-container {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: var(--space-6);
+      background: var(--surface-strong);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+
+    .prompt {
+      font-size: var(--text-xl);
+      font-weight: 800;
+      color: var(--ink);
+      min-height: 72px;
+      margin-bottom: var(--space-4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 var(--space-4);
+    }
+
+    .clock-wrap {
+      display: flex;
+      justify-content: center;
+      margin: var(--space-3) auto 0;
+    }
+
+    .time-readout {
+      text-align: center;
+      font-size: var(--text-2xl);
+      font-weight: 900;
+      color: var(--magenta-deep);
+      letter-spacing: 0.02em;
+      min-height: 40px;
+      margin-top: var(--space-3);
+      visibility: hidden;
+    }
+    .time-readout.visible { visibility: visible; }
+
+    #clock-svg {
+      width: 300px;
+      height: 300px;
+      max-width: 100%;
+      touch-action: none;
+      user-select: none;
+    }
+    #clock-svg .clock-face {
+      fill: var(--white);
+      stroke: var(--ink);
+      stroke-width: 3;
+    }
+    #clock-svg .tick {
+      stroke: var(--ink);
+      stroke-linecap: round;
+    }
+    #clock-svg .numeral {
+      font-family: var(--font-sans);
+      font-weight: 900;
+      font-size: 22px;
+      fill: var(--ink);
+    }
+    #clock-svg .hand-hour  { stroke: var(--magenta); stroke-width: 8; stroke-linecap: round; }
+    #clock-svg .hand-minute{ stroke: var(--teal);    stroke-width: 4; stroke-linecap: round; }
+    #clock-svg .hand-hit {
+      stroke: transparent;
+      stroke-width: 26;
+      stroke-linecap: round;
+      cursor: default;
+    }
+    #clock-svg.interactive .hand-hit { cursor: grab; }
+    #clock-svg.interactive .hand-hit:active { cursor: grabbing; }
+    #clock-svg .center-dot { fill: var(--ink); }
+
+    .answer-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+    }
+    #answer-input { max-width: 220px; }
+    #answer-input.hidden { display: none; }
+
+    .time-entry {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .time-entry.hidden { display: none; }
+    .time-entry .input--clock {
+      max-width: 90px;
+      padding: var(--space-3) var(--space-2);
+      text-align: center;
+      font-size: var(--text-3xl);
+      letter-spacing: 0.05em;
+    }
+    .time-entry__colon {
+      font-size: var(--text-3xl);
+      font-weight: 900;
+      color: var(--ink);
+      line-height: 1;
+      padding-bottom: 4px;
+    }
+
+    .feedback-slot {
+      min-height: 42px;
+      margin-top: var(--space-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .progress-slot {
+      width: 100%;
+      max-width: 480px;
+      margin: var(--space-6) auto 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="module-header">
+      <img class="module-header__icon" src="../../assets/module_icons/Time.png" alt="">
+      <h1 class="module-header__title">Time Telling</h1>
+      <span class="points-badge" id="points-badge">0 / 20</span>
+      <a class="icon-btn" href="../../menagerie/index.html" aria-label="Menagerie" title="My Menagerie"><img src="../../assets/module_icons/Menagerie.png" alt=""></a>
+    </header>
+
+    <div class="container">
+      <div id="game-container">
+        <div class="prompt" id="prompt">&nbsp;</div>
+
+        <div class="clock-wrap">
+          <svg id="clock-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+            <circle class="clock-face" cx="150" cy="150" r="140"/>
+            <g id="clock-ticks"></g>
+            <g id="clock-numerals"></g>
+            <!-- Hour hand (drawn as line pointing up; rotated via transform) -->
+            <line id="hour-hand"       class="hand-hour"   x1="150" y1="150" x2="150" y2="85"  transform="rotate(0 150 150)"/>
+            <line id="hour-hand-hit"   class="hand-hit"    x1="150" y1="150" x2="150" y2="85"  transform="rotate(0 150 150)"/>
+            <line id="minute-hand"     class="hand-minute" x1="150" y1="150" x2="150" y2="40"  transform="rotate(0 150 150)"/>
+            <line id="minute-hand-hit" class="hand-hit"    x1="150" y1="150" x2="150" y2="40"  transform="rotate(0 150 150)"/>
+            <circle class="center-dot" cx="150" cy="150" r="7"/>
+          </svg>
+        </div>
+
+        <div class="time-readout" id="time-readout">12:00</div>
+
+        <div class="answer-area">
+          <div class="time-entry hidden" id="time-entry">
+            <input
+              type="text"
+              id="hours-input"
+              class="input input--clock"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="2"
+              autocomplete="off"
+              aria-label="Hour"
+            >
+            <span class="time-entry__colon">:</span>
+            <input
+              type="text"
+              id="minutes-input"
+              class="input input--clock"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="2"
+              autocomplete="off"
+              aria-label="Minute"
+            >
+          </div>
+          <input
+            type="text"
+            id="answer-input"
+            class="input"
+            autocomplete="off"
+            placeholder=""
+            aria-label="Your answer"
+          >
+          <button class="btn btn--primary" id="submit-btn">Check</button>
+        </div>
+
+        <div class="feedback-slot" id="feedback-slot"></div>
+      </div>
+
+      <div class="progress-slot">
+        <div class="progress"><div class="progress__fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="row" style="justify-content: center; margin-top: var(--space-5);">
+        <a class="btn btn--ghost btn--sm" href="../../index.html">&larr; Back to portal</a>
+      </div>
+    </div>
+  </main>
+
+  <canvas id="confetti-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:200;"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="../../shared/state.js"></script>
+  <script src="../../shared/sounds.js"></script>
+  <script src="../../shared/rewards.js"></script>
+  <script>
+    const MODULE_KEY = 'time';
+    const GOAL = 10;
+    const CARD_THRESHOLDS = new Set([2, 4, 6, 8, 10]);
+
+    const GRIT_MESSAGES = [
+      'Stick with it!',
+      'Try a different approach',
+      'Almost — keep going!',
+      "You've got this!",
+      'Think it through!'
+    ];
+    const randomGrit = () => GRIT_MESSAGES[Math.floor(Math.random() * GRIT_MESSAGES.length)];
+
+    // ---------- Clock face construction ----------
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    function buildTicksAndNumerals() {
+      const ticks = document.getElementById('clock-ticks');
+      const nums  = document.getElementById('clock-numerals');
+      for (let i = 0; i < 60; i++) {
+        const angle = i * 6 * Math.PI / 180;
+        const isHour = i % 5 === 0;
+        const outer = 138;
+        const inner = outer - (isHour ? 12 : 5);
+        const x1 = 150 + Math.sin(angle) * inner;
+        const y1 = 150 - Math.cos(angle) * inner;
+        const x2 = 150 + Math.sin(angle) * outer;
+        const y2 = 150 - Math.cos(angle) * outer;
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('class', 'tick');
+        line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+        line.setAttribute('stroke-width', isHour ? 3 : 1.4);
+        ticks.appendChild(line);
+      }
+      for (let i = 1; i <= 12; i++) {
+        const angle = i * 30 * Math.PI / 180;
+        const x = 150 + Math.sin(angle) * 108;
+        const y = 150 - Math.cos(angle) * 108 + 8;
+        const t = document.createElementNS(SVG_NS, 'text');
+        t.setAttribute('class', 'numeral');
+        t.setAttribute('x', x);
+        t.setAttribute('y', y);
+        t.setAttribute('text-anchor', 'middle');
+        t.textContent = i;
+        nums.appendChild(t);
+      }
+    }
+
+    function updateHands(time) {
+      const h = time.hour % 12;
+      const m = time.minute;
+      const hourAngle = h * 30 + m * 0.5;
+      const minAngle  = m * 6;
+      document.getElementById('hour-hand').setAttribute('transform', `rotate(${hourAngle} 150 150)`);
+      document.getElementById('hour-hand-hit').setAttribute('transform', `rotate(${hourAngle} 150 150)`);
+      document.getElementById('minute-hand').setAttribute('transform', `rotate(${minAngle} 150 150)`);
+      document.getElementById('minute-hand-hit').setAttribute('transform', `rotate(${minAngle} 150 150)`);
+    }
+
+    // ---------- Time generation ----------
+    function sampleTime() {
+      const hour = Math.floor(Math.random() * 12) + 1; // 1..12
+      const r = Math.random();
+      let minute;
+      if (r < 0.20) {
+        minute = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
+      } else if (r < 0.80) {
+        minute = Math.floor(Math.random() * 12) * 5;
+      } else {
+        minute = Math.floor(Math.random() * 60);
+      }
+      return { hour, minute };
+    }
+
+    function addMinutes(t, diff) {
+      const total = ((t.hour % 12) * 60 + t.minute + diff + 720 * 10) % 720;
+      let h = Math.floor(total / 60);
+      if (h === 0) h = 12;
+      return { hour: h, minute: total % 60 };
+    }
+
+    function minuteDistance(a, b) {
+      const aMin = (a.hour % 12) * 60 + a.minute;
+      const bMin = (b.hour % 12) * 60 + b.minute;
+      const d = Math.abs(aMin - bMin);
+      return Math.min(d, 720 - d);
+    }
+
+    function formatTime(t) {
+      return `${t.hour}:${t.minute.toString().padStart(2, '0')}`;
+    }
+
+    function parseTime(str) {
+      const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return null;
+      const h = parseInt(m[1], 10);
+      const min = parseInt(m[2], 10);
+      if (h < 1 || h > 12) return null;
+      if (min < 0 || min > 59) return null;
+      return { hour: h, minute: min };
+    }
+
+
+    // ---------- Type B phrasing ----------
+    function formatPromptB(t) {
+      const { hour, minute } = t;
+      const next = hour === 12 ? 1 : hour + 1;
+      const variants = [formatTime(t)];
+      if (minute === 0) {
+        variants.push(`${hour} o'clock`);
+      } else if (minute === 15) {
+        variants.push(`quarter past ${hour}`);
+      } else if (minute === 30) {
+        variants.push(`half past ${hour}`);
+      } else if (minute === 45) {
+        variants.push(`quarter to ${next}`);
+      } else if (minute < 30) {
+        variants.push(`${minute} minutes past ${hour}`);
+        variants.push(`${minute} minutes after ${hour}`);
+      } else {
+        variants.push(`${60 - minute} minutes to ${next}`);
+      }
+      return variants[Math.floor(Math.random() * variants.length)];
+    }
+
+    // ---------- Type C scenarios ----------
+    const SCENARIOS = [
+      'School starts at {time} — how many minutes until school starts?',
+      'Lunch is at {time} — how many minutes until lunch?',
+      'Recess starts at {time} — how many minutes until recess?',
+      'Your show starts at {time} — how many minutes until it starts?',
+      'Practice starts at {time} — how many minutes until practice?'
+    ];
+    function pickScenario(endTime) {
+      const tpl = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+      return tpl.replace('{time}', formatTime(endTime));
+    }
+
+    // Work backwards from a clean end time:
+    //   1. End hour ∈ {8, 9, 10, 11, 12, 1, 2, 3}  (school-day range)
+    //   2. End minute ∈ {0, 30}                    (on the hour or half hour)
+    //   3. Elapsed ∈ {5, 10, …, 55}                (multiple of 5, max 55)
+    //   4. Start = end − elapsed (borrow an hour if start minute goes negative)
+    function generateTypeC() {
+      const END_HOUR_OPTIONS = [8, 9, 10, 11, 12, 1, 2, 3];
+      const endHour = END_HOUR_OPTIONS[Math.floor(Math.random() * END_HOUR_OPTIONS.length)];
+      const endMinute = Math.random() < 0.5 ? 0 : 30;
+      const diff = (Math.floor(Math.random() * 11) + 1) * 5; // 5..55
+
+      let startMinute = endMinute - diff;
+      let startHour = endHour;
+      if (startMinute < 0) {
+        startMinute += 60;
+        startHour = (startHour === 1) ? 12 : startHour - 1;
+      }
+
+      const start = { hour: startHour, minute: startMinute };
+      const end = { hour: endHour, minute: endMinute };
+      return { start, diff, scenario: pickScenario(end) };
+    }
+
+    // ---------- Round state ----------
+    let currentRound = null;
+
+    function pickType() {
+      const r = Math.random();
+      if (r < 0.35) return 'A';
+      if (r < 0.70) return 'B';
+      return 'C';
+    }
+
+    function setReadoutVisible(vis) {
+      document.getElementById('time-readout').classList.toggle('visible', vis);
+    }
+    function updateReadout(time) {
+      document.getElementById('time-readout').textContent = formatTime(time);
+    }
+
+    function newRound() {
+      clearFeedback();
+      const answerInput = document.getElementById('answer-input');
+      const timeEntry = document.getElementById('time-entry');
+      const hoursInput = document.getElementById('hours-input');
+      const minutesInput = document.getElementById('minutes-input');
+
+      // Reset all inputs
+      [answerInput, hoursInput, minutesInput].forEach(el => {
+        el.value = '';
+        el.disabled = false;
+      });
+
+      const svg = document.getElementById('clock-svg');
+      svg.classList.remove('interactive');
+      setReadoutVisible(false);
+
+      const type = pickType();
+
+      if (type === 'A') {
+        const target = sampleTime();
+        currentRound = { type, target, display: target };
+        setPrompt('What time is shown on the clock?');
+        answerInput.classList.add('hidden');
+        timeEntry.classList.remove('hidden');
+      } else if (type === 'B') {
+        const target = sampleTime();
+        const display = { hour: 12, minute: 0 };
+        currentRound = { type, target, display };
+        setPrompt(`Set the clock to&nbsp;<strong>${formatPromptB(target)}</strong>`);
+        answerInput.classList.add('hidden');
+        timeEntry.classList.add('hidden');
+        svg.classList.add('interactive');
+        updateReadout(display);
+        setReadoutVisible(true);
+      } else {
+        const { start, diff, scenario } = generateTypeC();
+        currentRound = { type, target: diff, display: start, scenario };
+        setPrompt(scenario);
+        answerInput.placeholder = 'minutes';
+        answerInput.classList.remove('hidden');
+        timeEntry.classList.add('hidden');
+      }
+
+      updateHands(currentRound.display);
+
+      // Focus the first active input
+      setTimeout(() => {
+        if (type === 'A') hoursInput.focus();
+        else if (type === 'C') answerInput.focus();
+      }, 0);
+    }
+
+    function setPrompt(html) {
+      document.getElementById('prompt').innerHTML = html;
+    }
+
+    function refreshPointsUI() {
+      const s = State.get();
+      const pts = s.modules[MODULE_KEY].points;
+      document.getElementById('points-badge').textContent = `${pts} / ${GOAL}`;
+      document.getElementById('progress-fill').style.width = (pts / GOAL * 100) + '%';
+    }
+
+    function clearFeedback() {
+      document.getElementById('feedback-slot').innerHTML = '';
+    }
+    function showFeedback(msg, variant) {
+      const slot = document.getElementById('feedback-slot');
+      slot.innerHTML = `<div class="feedback feedback--${variant} fade-in-up">${msg}</div>`;
+    }
+
+    function fireConfetti() {
+      if (typeof confetti !== 'function') return;
+      confetti({
+        particleCount: 120,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#E700FF', '#7FD8D7', '#E8B842']
+      });
+    }
+
+    function showCompletionOverlay() {
+      fireConfetti();
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <h2 class="modal__title">Module Complete!</h2>
+        <p class="feedback feedback--growth fade-in-up">You mastered Time Telling!</p>
+        <div style="margin-top: var(--space-5);">
+          <a class="btn btn--primary" href="../../index.html">Back to portal</a>
+        </div>
+      `;
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+    }
+
+    function handleCorrect() {
+      Sounds.correct();
+      showFeedback('Correct!', 'correct');
+
+      const s = State.get();
+      const prevPts = s.modules[MODULE_KEY].points;
+      s.modules[MODULE_KEY].points = Math.min(prevPts + 1, GOAL);
+      const pts = s.modules[MODULE_KEY].points;
+      if (pts >= GOAL) s.modules[MODULE_KEY].complete = true;
+      State.save(s);
+      refreshPointsUI();
+      const crossedThreshold = pts > prevPts && CARD_THRESHOLDS.has(pts);
+
+      document.getElementById('answer-input').disabled = true;
+      document.getElementById('hours-input').disabled = true;
+      document.getElementById('minutes-input').disabled = true;
+      document.getElementById('clock-svg').classList.remove('interactive');
+
+      const doNext = () => {
+        if (s.modules[MODULE_KEY].complete) {
+          Sounds.moduleComplete();
+          setTimeout(showCompletionOverlay, 400);
+        } else {
+          setTimeout(newRound, 700);
+        }
+      };
+
+      if (crossedThreshold) {
+        setTimeout(() => Rewards.showCardPickModal(() => doNext()), 500);
+      } else {
+        doNext();
+      }
+    }
+
+    function handleWrong() {
+      Sounds.wrong();
+      showFeedback(randomGrit(), 'wrong');
+
+      // Shake the container
+      const container = document.getElementById('game-container');
+      container.classList.remove('shake');
+      void container.offsetWidth;
+      container.classList.add('shake');
+      setTimeout(() => container.classList.remove('shake'), 500);
+
+      // Keep inputs live so the child can adjust and try again on the
+      // same round. Do not auto-advance, do not reveal the answer.
+      if (currentRound.type === 'A') {
+        const hoursInput = document.getElementById('hours-input');
+        hoursInput.focus();
+        hoursInput.select();
+      } else if (currentRound.type === 'C') {
+        const input = document.getElementById('answer-input');
+        input.focus();
+        input.select();
+      }
+      // Type B: clock stays interactive; hands stay where the child set them.
+    }
+
+    function submit() {
+      if (!currentRound) return;
+
+      if (currentRound.type === 'A') {
+        const hRaw = document.getElementById('hours-input').value.trim();
+        const mRaw = document.getElementById('minutes-input').value.trim();
+        if (hRaw === '' || mRaw === '') return;
+        const h = parseInt(hRaw, 10);
+        const m = parseInt(mRaw, 10);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) { handleWrong(); return; }
+        if (h < 1 || h > 12 || m < 0 || m > 59) { handleWrong(); return; }
+        if (h === currentRound.target.hour && m === currentRound.target.minute) {
+          handleCorrect();
+        } else {
+          handleWrong();
+        }
+      } else if (currentRound.type === 'B') {
+        const dist = minuteDistance(currentRound.display, currentRound.target);
+        if (dist <= 5) handleCorrect(); else handleWrong();
+      } else { // type C
+        const input = document.getElementById('answer-input');
+        const raw = input.value.trim();
+        if (raw === '') return;
+        const val = Number(raw);
+        if (!Number.isFinite(val)) { handleWrong(); return; }
+        if (val === currentRound.target) handleCorrect(); else handleWrong();
+      }
+    }
+
+    // ---------- Draggable hands (type B) ----------
+    function setupDraggableHands() {
+      const svg = document.getElementById('clock-svg');
+      let activeHand = null;
+
+      function getAngle(e) {
+        const rect = svg.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        let deg = Math.atan2(dx, -dy) * 180 / Math.PI;
+        if (deg < 0) deg += 360;
+        return deg;
+      }
+
+      function onDown(hand, e) {
+        if (!svg.classList.contains('interactive')) return;
+        if (!currentRound || currentRound.type !== 'B') return;
+        activeHand = hand;
+        e.preventDefault();
+        try { svg.setPointerCapture && svg.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+
+      function onMove(e) {
+        if (!activeHand || !currentRound) return;
+        const deg = getAngle(e);
+        if (activeHand === 'minute') {
+          currentRound.display.minute = Math.round(deg / 6) % 60;
+        } else {
+          const currentMin = currentRound.display.minute;
+          let newHour = Math.round((deg - currentMin * 0.5) / 30);
+          newHour = ((newHour % 12) + 12) % 12;
+          if (newHour === 0) newHour = 12;
+          currentRound.display.hour = newHour;
+        }
+        updateHands(currentRound.display);
+        updateReadout(currentRound.display);
+      }
+
+      function onUp() { activeHand = null; }
+
+      document.getElementById('hour-hand-hit').addEventListener('pointerdown', (e) => onDown('hour', e));
+      document.getElementById('minute-hand-hit').addEventListener('pointerdown', (e) => onDown('minute', e));
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+    }
+
+    // ---------- Wire up ----------
+    document.getElementById('submit-btn').addEventListener('click', submit);
+    document.getElementById('answer-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    });
+
+    // Type A: hours + minutes fields with auto-advance and Enter-to-submit
+    const hoursEl = document.getElementById('hours-input');
+    const minutesEl = document.getElementById('minutes-input');
+
+    hoursEl.addEventListener('input', function () {
+      const digits = this.value.replace(/\D/g, '').slice(0, 2);
+      this.value = digits;
+      // Auto-advance when 2 digits typed, or after 1 digit if it can't be a
+      // 2-digit hour start (hours 10-12 start with '1', so non-'1' first
+      // digits immediately imply a single-digit hour).
+      if (digits.length === 2) {
+        minutesEl.focus();
+      } else if (digits.length === 1 && digits !== '1') {
+        minutesEl.focus();
+      }
+    });
+
+    minutesEl.addEventListener('input', function () {
+      this.value = this.value.replace(/\D/g, '').slice(0, 2);
+    });
+
+    // Backspace in empty minutes field jumps back to hours
+    minutesEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && this.value === '') {
+        e.preventDefault();
+        hoursEl.focus();
+        // Place cursor at end by re-assigning value
+        const v = hoursEl.value;
+        hoursEl.value = '';
+        hoursEl.value = v;
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        submit();
+      }
+    });
+
+    hoursEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      if (currentRound && currentRound.type === 'B') submit();
+    });
+
+    buildTicksAndNumerals();
+    setupDraggableHands();
+    refreshPointsUI();
+    newRound();
+  </script>
+</body>
+</html>

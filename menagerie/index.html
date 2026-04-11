@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Menagerie</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <style>
+    .menagerie-header {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto var(--space-6);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-full);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+    .back-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--magenta);
+      text-decoration: none;
+    }
+    .menagerie-title {
+      text-align: center;
+      font-size: var(--text-2xl);
+      font-weight: 900;
+      margin: 0;
+    }
+    .menagerie-count {
+      justify-self: end;
+      background: var(--teal-soft);
+      color: var(--teal-deep);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 800;
+    }
+    @media (max-width: 560px) {
+      .menagerie-header {
+        grid-template-columns: auto auto;
+        grid-template-rows: auto auto;
+      }
+      .menagerie-title {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+    }
+
+    .count-banner {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto var(--space-6);
+      text-align: center;
+      font-size: var(--text-lg);
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+
+    #main-content {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .card-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: var(--space-6);
+    }
+    @media (max-width: 720px) {
+      .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: var(--space-5);
+      }
+    }
+    @media (max-width: 480px) {
+      .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-4);
+      }
+    }
+
+    .slot__name {
+      font-size: var(--text-base);
+    }
+
+    .slot {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .slot__frame {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      background: var(--white);
+      border: 2px solid var(--line);
+      transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .slot--collected .slot__frame { cursor: pointer; }
+    .slot--collected .slot__frame:hover {
+      transform: translateY(-4px);
+      border-color: var(--magenta);
+      box-shadow: var(--shadow-md);
+    }
+    .slot--collected .slot__frame:focus-visible {
+      border-color: var(--magenta);
+      outline: none;
+    }
+
+    .slot__img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .slot--locked .slot__frame {
+      background: var(--lock-gray);
+      border-color: var(--lock-gray);
+    }
+    .slot--locked .slot__lock {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-faint);
+    }
+    .slot--locked .slot__lock svg {
+      width: 38%;
+      height: 38%;
+      opacity: 0.55;
+    }
+
+    .slot__name {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--ink-soft);
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-state {
+      max-width: 480px;
+      margin: var(--space-12) auto;
+      text-align: center;
+      color: var(--ink-soft);
+    }
+    .empty-state__icon {
+      width: 96px;
+      height: 96px;
+      margin: 0 auto var(--space-5);
+      color: var(--teal-deep);
+      opacity: 0.7;
+    }
+    .empty-state__title {
+      font-size: var(--text-xl);
+      color: var(--ink);
+      margin-bottom: var(--space-3);
+    }
+
+    .modal-image-frame {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto var(--space-4);
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+    .modal-image-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .modal { position: relative; }
+
+    .page { position: relative; z-index: 1; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="menagerie-header">
+      <a class="back-btn" href="../index.html" aria-label="Back to portal">
+        <span aria-hidden="true">&larr;</span>
+        <span>Back</span>
+      </a>
+      <h1 class="menagerie-title">My Menagerie</h1>
+      <span class="menagerie-count" id="header-count">0 cards</span>
+    </header>
+
+    <p class="count-banner" id="count-banner">You have 0 animals in your menagerie!</p>
+
+    <div id="main-content"></div>
+  </main>
+
+  <script src="../shared/state.js"></script>
+  <script>
+    function animalNameFromFilename(filename) {
+      const base = filename.replace(/\.[^.]+$/, '');
+      const spaced = base.replace(/[_-]+/g, ' ').trim();
+      return spaced.replace(/\w\S*/g, (w) =>
+        w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      );
+    }
+
+    function lockSvg() {
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="11" width="16" height="10" rx="2"/>
+          <path d="M8 11V7a4 4 0 1 1 8 0v4"/>
+        </svg>`;
+    }
+
+    function emptyIconSvg() {
+      return `
+        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2l2.5 5 5.5.8-4 3.9.9 5.5L12 14.8 7.1 17.2 8 11.7 4 7.8l5.5-.8L12 2z"/>
+        </svg>`;
+    }
+
+    function openModal(filename) {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+
+      const close = document.createElement('button');
+      close.className = 'modal__close';
+      close.setAttribute('aria-label', 'Close');
+      close.innerHTML = '&times;';
+
+      const frame = document.createElement('div');
+      frame.className = 'modal-image-frame';
+      const img = document.createElement('img');
+      img.src = `../assets/Animal_Pictures/${filename}`;
+      img.alt = animalNameFromFilename(filename);
+      frame.appendChild(img);
+
+      const name = document.createElement('h2');
+      name.className = 'modal__title';
+      name.textContent = animalNameFromFilename(filename);
+
+      modal.appendChild(close);
+      modal.appendChild(frame);
+      modal.appendChild(name);
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+
+      function dismiss() {
+        if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+        document.removeEventListener('keydown', onKey);
+      }
+      function onKey(e) { if (e.key === 'Escape') dismiss(); }
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) dismiss(); });
+      close.addEventListener('click', dismiss);
+      document.addEventListener('keydown', onKey);
+    }
+
+    function render() {
+      const state = State.get();
+      const manifest = State.getAnimalManifest();
+      const manifestSet = new Set(manifest);
+
+      // Drop any stale menagerie entries that reference filenames no longer
+      // present in the manifest (e.g. leftover IMG_*.jpg names from before
+      // the Animal*.jpg rename). Save the cleaned state back so the badge
+      // count and grid stay in sync.
+      const cleaned = state.menagerie.filter((f) => manifestSet.has(f));
+      if (cleaned.length !== state.menagerie.length) {
+        state.menagerie = cleaned;
+        State.save(state);
+      }
+
+      const owned = new Set(state.menagerie);
+      const count = state.menagerie.length;
+
+      document.getElementById('header-count').textContent =
+        `${count} card${count === 1 ? '' : 's'}`;
+      document.getElementById('count-banner').textContent =
+        `You have ${count} animal${count === 1 ? '' : 's'} in your menagerie!`;
+
+      const main = document.getElementById('main-content');
+      main.innerHTML = '';
+
+      if (count === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.innerHTML = `
+          ${emptyIconSvg()}
+          <h2 class="empty-state__title">Your menagerie is empty</h2>
+          <p>Complete challenges to earn animal cards!</p>
+        `;
+        main.appendChild(empty);
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'card-grid';
+
+      // Cluster collected cards at the top; uncollected (locked) follow below.
+      // Preserve manifest order within each group.
+      const sorted = [
+        ...manifest.filter((f) => owned.has(f)),
+        ...manifest.filter((f) => !owned.has(f))
+      ];
+
+      sorted.forEach((filename) => {
+        const slot = document.createElement('div');
+        const isCollected = owned.has(filename);
+        slot.className = 'slot ' + (isCollected ? 'slot--collected' : 'slot--locked');
+
+        const frame = document.createElement(isCollected ? 'button' : 'div');
+        frame.className = 'slot__frame';
+        if (isCollected) {
+          frame.type = 'button';
+          frame.setAttribute('aria-label', animalNameFromFilename(filename));
+          const img = document.createElement('img');
+          img.className = 'slot__img';
+          img.src = `../assets/Animal_Pictures/${filename}`;
+          img.alt = animalNameFromFilename(filename);
+          img.loading = 'lazy';
+          frame.appendChild(img);
+          frame.addEventListener('click', () => openModal(filename));
+        } else {
+          const lock = document.createElement('div');
+          lock.className = 'slot__lock';
+          lock.innerHTML = lockSvg();
+          frame.appendChild(lock);
+        }
+
+        slot.appendChild(frame);
+
+        if (isCollected) {
+          const name = document.createElement('div');
+          name.className = 'slot__name';
+          name.textContent = animalNameFromFilename(filename);
+          slot.appendChild(name);
+        }
+
+        grid.appendChild(slot);
+      });
+
+      main.appendChild(grid);
+    }
+
+    render();
+  </script>
+</body>
+</html>

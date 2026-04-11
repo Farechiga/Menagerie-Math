@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coins</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .page { position: relative; z-index: 1; }
+
+    .module-header {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto var(--space-5);
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .module-header__icon {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+    .module-header__title {
+      font-size: var(--text-xl);
+      font-weight: 900;
+      margin: 0;
+    }
+    .points-badge {
+      background: var(--teal);
+      color: var(--white);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      font-size: var(--text-base);
+      box-shadow: var(--shadow-sm);
+    }
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-full);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: var(--text-lg);
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+    .icon-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--magenta);
+      text-decoration: none;
+    }
+    .icon-btn img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+
+    #game-container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: var(--space-6);
+      background: var(--surface-strong);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+
+    .prompt {
+      font-size: var(--text-lg);
+      color: var(--ink-soft);
+      font-weight: 800;
+      margin-bottom: var(--space-5);
+    }
+
+    .subgame { display: none; }
+    .subgame.active { display: block; }
+
+    /* ---- Sub-game A: Exact change ---- */
+    .purchase-card {
+      position: relative;
+      width: 220px;
+      margin: 0 auto var(--space-5);
+    }
+    .purchase-card__frame {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      border: 4px solid var(--white);
+      background: var(--white);
+    }
+    .purchase-card__frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .price-tag {
+      position: absolute;
+      top: -14px;
+      right: -14px;
+      background: var(--magenta);
+      color: var(--white);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      font-size: var(--text-xl);
+      box-shadow: var(--shadow-md);
+      transform: rotate(6deg);
+    }
+
+    .drop-zone {
+      min-height: 140px;
+      max-width: 520px;
+      margin: 0 auto var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--teal-soft);
+      border: 3px dashed var(--teal);
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+    .drop-zone__label {
+      color: var(--teal-deep);
+      font-size: var(--text-sm);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      margin-bottom: var(--space-2);
+      text-transform: uppercase;
+    }
+    .running-total {
+      font-size: var(--text-2xl);
+      font-weight: 900;
+      color: var(--ink);
+      margin-bottom: var(--space-3);
+    }
+    .running-total.match { color: var(--success); }
+    .drop-zone__coins {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      justify-content: center;
+      align-items: center;
+      min-height: 60px;
+    }
+
+    .coin-tray {
+      max-width: 520px;
+      margin: 0 auto var(--space-5);
+      padding: var(--space-4);
+      background: rgba(255, 255, 255, 0.6);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      justify-content: center;
+      align-items: center;
+      min-height: 80px;
+    }
+
+    .coin {
+      display: block;
+      cursor: grab;
+      transition: transform 150ms ease, filter 150ms ease;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      filter: drop-shadow(0 2px 4px rgba(31, 29, 43, 0.15));
+    }
+    .coin:hover { transform: translateY(-3px) scale(1.05); }
+    .coin:active { cursor: grabbing; }
+
+    /* ---- Sub-game B: Which can I afford? ---- */
+    .wallet {
+      max-width: 520px;
+      margin: 0 auto var(--space-5);
+      padding: var(--space-4) var(--space-5);
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 2px solid var(--line);
+      text-align: center;
+    }
+    .wallet__label {
+      font-size: var(--text-sm);
+      font-weight: 800;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-3);
+    }
+    .wallet__coins {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      justify-content: center;
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+    .wallet__coins .coin { cursor: default; }
+    .wallet__coins .coin:hover { transform: none; }
+    .wallet__total {
+      font-size: var(--text-2xl);
+      font-weight: 900;
+      color: var(--magenta);
+    }
+
+    .card-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+      max-width: 580px;
+      margin: 0 auto var(--space-3);
+    }
+    @media (max-width: 560px) {
+      .card-options { grid-template-columns: 1fr; }
+    }
+
+    .card-option {
+      position: relative;
+      background: var(--white);
+      border: 3px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3);
+      cursor: pointer;
+      transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+      font-family: inherit;
+    }
+    .card-option:hover {
+      transform: translateY(-4px);
+      border-color: var(--magenta);
+      box-shadow: var(--shadow-md);
+    }
+    .card-option:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
+    .card-option__frame {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: var(--space-3);
+      background: var(--white);
+    }
+    .card-option__frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .card-option__price {
+      display: inline-block;
+      background: var(--magenta);
+      color: var(--white);
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-base);
+      font-weight: 900;
+    }
+
+    .feedback-slot {
+      min-height: 42px;
+      margin-top: var(--space-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .progress-slot {
+      width: 100%;
+      max-width: 480px;
+      margin: var(--space-6) auto 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="module-header">
+      <img class="module-header__icon" src="../../assets/module_icons/Coins.png" alt="">
+      <h1 class="module-header__title">Coins</h1>
+      <span class="points-badge" id="points-badge">0 / 10</span>
+      <a class="icon-btn" href="../../menagerie/index.html" aria-label="Menagerie" title="My Menagerie"><img src="../../assets/module_icons/Menagerie.png" alt=""></a>
+    </header>
+
+    <div class="container">
+      <div id="game-container">
+        <div class="prompt" id="prompt">&nbsp;</div>
+
+        <!-- Sub-game A: Exact change -->
+        <div class="subgame" id="subgame-a">
+          <div class="purchase-card">
+            <div class="purchase-card__frame">
+              <img id="purchase-img" alt="">
+            </div>
+            <div class="price-tag" id="price-tag">0¢</div>
+          </div>
+
+          <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone__label">Drag coins here</div>
+            <div class="drop-zone__coins" id="drop-zone-coins"></div>
+          </div>
+
+          <div class="coin-tray" id="coin-tray"></div>
+
+          <button class="btn btn--primary" id="buy-btn">Buy it!</button>
+        </div>
+
+        <!-- Sub-game B: Which can I afford? -->
+        <div class="subgame" id="subgame-b">
+          <div class="wallet">
+            <div class="wallet__label">You have</div>
+            <div class="wallet__coins" id="wallet-coins"></div>
+          </div>
+          <div class="card-options" id="card-options"></div>
+        </div>
+
+        <div class="feedback-slot" id="feedback-slot"></div>
+      </div>
+
+      <div class="progress-slot">
+        <div class="progress"><div class="progress__fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="row" style="justify-content: center; margin-top: var(--space-5);">
+        <a class="btn btn--ghost btn--sm" href="../../index.html">&larr; Back to portal</a>
+      </div>
+    </div>
+  </main>
+
+  <canvas id="confetti-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:200;"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="../../shared/state.js"></script>
+  <script src="../../shared/sounds.js"></script>
+  <script src="../../shared/rewards.js"></script>
+  <script>
+    const MODULE_KEY = 'coins';
+    const GOAL = 10;
+
+    const COIN_VALUES = { Quarter: 25, Dime: 10, Nickel: 5, Penny: 1 };
+    const COIN_SIZES  = { Quarter: 64, Dime: 47, Nickel: 56, Penny: 50 };
+    const COIN_ORDER  = ['Quarter', 'Dime', 'Nickel', 'Penny'];
+
+    // ---------- Asset helpers ----------
+    function coinImageSrc(denom) {
+      const side = Math.random() < 0.5 ? 'Heads' : 'Tails';
+      return `../../assets/Coins/${denom}_${side}.png`;
+    }
+
+    function animalImageSrc(filename) {
+      return `../../assets/Animal_Pictures/${filename}`;
+    }
+
+    function formatPrice(cents) {
+      if (cents >= 100) return `$${(cents / 100).toFixed(2)}`;
+      return `${cents}¢`;
+    }
+
+    // ---------- Generic helpers ----------
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function greedyCoins(cents) {
+      const out = [];
+      let remaining = cents;
+      for (const d of COIN_ORDER) {
+        while (remaining >= COIN_VALUES[d]) {
+          out.push(d);
+          remaining -= COIN_VALUES[d];
+        }
+      }
+      return out;
+    }
+
+    function pickCards(n) {
+      // Prefer unowned cards, fall back to any manifest card if needed
+      let cards = Rewards.pickCards(n);
+      if (cards.length < n) {
+        const have = new Set(cards);
+        const manifest = State.getAnimalManifest();
+        for (const f of shuffle(manifest)) {
+          if (cards.length >= n) break;
+          if (!have.has(f)) { cards.push(f); have.add(f); }
+        }
+      }
+      return cards;
+    }
+
+    // ---------- Round state ----------
+    let currentRound = null;
+    let locked = false;
+
+    function pickSubgame() {
+      return Math.random() < 0.6 ? 'A' : 'B';
+    }
+
+    function newRound() {
+      if (locked) return;
+      clearFeedback();
+      const sub = pickSubgame();
+      if (sub === 'A') generateSubgameA();
+      else generateSubgameB();
+    }
+
+    // ---------- Sub-game A: Exact change ----------
+    function generateSubgameA() {
+      // Price: multiple of 5¢, 5¢..95¢
+      const priceOptions = [];
+      for (let p = 5; p <= 95; p += 5) priceOptions.push(p);
+      const price = priceOptions[Math.floor(Math.random() * priceOptions.length)];
+
+      const needed = greedyCoins(price);
+
+      // Add 3–5 decoys of random denominations
+      const decoyCount = 3 + Math.floor(Math.random() * 3);
+      const decoys = [];
+      for (let i = 0; i < decoyCount; i++) {
+        decoys.push(COIN_ORDER[Math.floor(Math.random() * COIN_ORDER.length)]);
+      }
+
+      const trayDenoms = shuffle(needed.concat(decoys));
+      const animal = pickCards(1)[0];
+
+      currentRound = { type: 'A', price, animal, trayDenoms };
+
+      setPrompt('Can you pay the exact price?');
+      document.getElementById('subgame-a').classList.add('active');
+      document.getElementById('subgame-b').classList.remove('active');
+
+      // Purchase card + price
+      const img = document.getElementById('purchase-img');
+      img.src = animalImageSrc(animal);
+      img.alt = animal;
+      document.getElementById('price-tag').textContent = formatPrice(price);
+
+      // Reset drop zone
+      document.getElementById('drop-zone-coins').innerHTML = '';
+
+      // Build tray
+      const tray = document.getElementById('coin-tray');
+      tray.innerHTML = '';
+      trayDenoms.forEach((denom) => tray.appendChild(createCoin(denom)));
+
+      updateRunningTotal();
+    }
+
+    function createCoin(denom) {
+      const img = document.createElement('img');
+      img.className = 'coin';
+      img.src = coinImageSrc(denom);
+      img.alt = denom;
+      img.dataset.value = COIN_VALUES[denom];
+      img.dataset.denom = denom;
+      const size = COIN_SIZES[denom];
+      img.style.width = size + 'px';
+      img.style.height = size + 'px';
+      attachCoinInteraction(img);
+      return img;
+    }
+
+    // Running total is intentionally not displayed — the child adds coins
+    // up in her head and submits when she thinks it matches the price.
+    function updateRunningTotal() { /* no-op */ }
+
+    function attachCoinInteraction(coin) {
+      coin.addEventListener('pointerdown', function (e) {
+        if (locked) return;
+        if (!currentRound || currentRound.type !== 'A') return;
+        e.preventDefault();
+        const startX = e.clientX, startY = e.clientY;
+        const rect = coin.getBoundingClientRect();
+        let dragging = false;
+        let ghost = null;
+
+        function onMove(ev) {
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+          if (!dragging && (dx * dx + dy * dy) > 36) {
+            dragging = true;
+            ghost = coin.cloneNode(true);
+            ghost.style.position = 'fixed';
+            ghost.style.left = rect.left + 'px';
+            ghost.style.top = rect.top + 'px';
+            ghost.style.width = rect.width + 'px';
+            ghost.style.height = rect.height + 'px';
+            ghost.style.pointerEvents = 'none';
+            ghost.style.zIndex = '500';
+            ghost.style.opacity = '0.9';
+            ghost.style.transform = 'scale(1.1)';
+            document.body.appendChild(ghost);
+            coin.style.opacity = '0.3';
+          }
+          if (dragging && ghost) {
+            ghost.style.left = (ev.clientX - rect.width / 2) + 'px';
+            ghost.style.top = (ev.clientY - rect.height / 2) + 'px';
+          }
+        }
+
+        function onUp(ev) {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          document.removeEventListener('pointercancel', onUp);
+
+          if (ghost) ghost.remove();
+          coin.style.opacity = '';
+
+          const parentId = coin.parentElement && coin.parentElement.id;
+          const dzCoins = document.getElementById('drop-zone-coins');
+          const tray = document.getElementById('coin-tray');
+
+          if (dragging) {
+            const dz = document.getElementById('drop-zone');
+            const dzRect = dz.getBoundingClientRect();
+            const inZone = ev.clientX >= dzRect.left && ev.clientX <= dzRect.right
+                        && ev.clientY >= dzRect.top && ev.clientY <= dzRect.bottom;
+            if (parentId === 'coin-tray' && inZone) {
+              dzCoins.appendChild(coin);
+            } else if (parentId === 'drop-zone-coins' && !inZone) {
+              tray.appendChild(coin);
+            }
+          } else {
+            // Treat as click/tap: toggle between tray and drop zone
+            if (parentId === 'coin-tray') dzCoins.appendChild(coin);
+            else if (parentId === 'drop-zone-coins') tray.appendChild(coin);
+          }
+          updateRunningTotal();
+        }
+
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+        document.addEventListener('pointercancel', onUp);
+      });
+    }
+
+    function submitSubgameA() {
+      if (!currentRound || currentRound.type !== 'A') return;
+      if (locked) return;
+
+      const coins = document.getElementById('drop-zone-coins').querySelectorAll('.coin');
+      let total = 0;
+      coins.forEach((c) => { total += parseInt(c.dataset.value, 10); });
+
+      if (total === currentRound.price) {
+        handleCorrect(currentRound.animal);
+      } else {
+        Sounds.wrong();
+        showFeedback('Try adding or removing a coin', 'wrong');
+        const dz = document.getElementById('drop-zone');
+        dz.classList.remove('shake');
+        void dz.offsetWidth;
+        dz.classList.add('shake');
+        setTimeout(() => dz.classList.remove('shake'), 500);
+      }
+    }
+
+    // ---------- Sub-game B: Which can I afford? ----------
+
+    // Build a wallet of 3–6 random coins (Quarters/Dimes/Nickels only so the
+    // total stays a multiple of 5¢) with a total in [15, 80]. Weighted pool
+    // favors Dimes/Nickels for visual variety at the mid range.
+    function buildWallet() {
+      const pool = ['Quarter', 'Dime', 'Dime', 'Nickel', 'Nickel'];
+      for (let attempts = 0; attempts < 30; attempts++) {
+        const count = 3 + Math.floor(Math.random() * 4); // 3..6
+        const coins = [];
+        let total = 0;
+        for (let i = 0; i < count; i++) {
+          const d = pool[Math.floor(Math.random() * pool.length)];
+          coins.push(d);
+          total += COIN_VALUES[d];
+        }
+        if (total >= 15 && total <= 80) return { coins, total };
+      }
+      return { coins: ['Quarter', 'Dime', 'Nickel'], total: 40 };
+    }
+
+    // Generate three prices: exactly one equal to walletTotal (the card the
+    // child has exactly enough for), plus two distractor prices. All prices
+    // are 5¢ multiples. Group spread (max - min) ≤ 30¢. All distinct.
+    function generateSubgameBPrices(walletTotal) {
+      const correct = walletTotal;
+
+      // Candidate distractors: 5¢ multiples in [5, 95] within 30¢ of `correct`,
+      // excluding `correct` itself.
+      const lo = Math.max(5, correct - 30);
+      const hi = Math.min(95, correct + 30);
+      const candidates = [];
+      for (let p = lo; p <= hi; p += 5) {
+        if (p !== correct) candidates.push(p);
+      }
+
+      for (let attempts = 0; attempts < 80; attempts++) {
+        const pool = shuffle(candidates);
+        const a = pool[0];
+        const b = pool[1];
+        if (a === undefined || b === undefined) break;
+        const group = [correct, a, b];
+        const gMin = Math.min(correct, a, b);
+        const gMax = Math.max(correct, a, b);
+        if (gMax - gMin <= 30) return shuffle(group);
+      }
+
+      // Fallback: correct ± 5¢ and correct + 10¢ (clamped)
+      const minus5 = Math.max(5, correct - 5);
+      const plus10 = Math.min(95, correct + 10);
+      return shuffle([correct, minus5 === correct ? correct + 5 : minus5, plus10 === correct ? correct + 15 : plus10]);
+    }
+
+    // Three random images from the full manifest (display only — the card
+    // actually awarded on a correct answer is a fresh unowned pick).
+    function sampleDisplayCards(n) {
+      const manifest = State.getAnimalManifest();
+      return shuffle(manifest).slice(0, n);
+    }
+
+    function generateSubgameB() {
+      const { coins: walletDenoms, total: walletTotal } = buildWallet();
+      const cards = sampleDisplayCards(3);
+      const prices = generateSubgameBPrices(walletTotal);
+      const correctIdx = prices.indexOf(walletTotal);
+
+      currentRound = { type: 'B', walletTotal, walletDenoms, cards, prices, correctIdx };
+
+      setPrompt('Which card do you have exactly enough for?');
+      document.getElementById('subgame-a').classList.remove('active');
+      document.getElementById('subgame-b').classList.add('active');
+
+      // Wallet
+      const walletCoinsEl = document.getElementById('wallet-coins');
+      walletCoinsEl.innerHTML = '';
+      walletDenoms.forEach((denom) => {
+        const img = document.createElement('img');
+        img.className = 'coin';
+        img.src = coinImageSrc(denom);
+        img.alt = denom;
+        const size = COIN_SIZES[denom];
+        img.style.width = size + 'px';
+        img.style.height = size + 'px';
+        walletCoinsEl.appendChild(img);
+      });
+      // Total is intentionally NOT displayed — the child must add the coins up.
+
+      // Card options
+      const optionsEl = document.getElementById('card-options');
+      optionsEl.innerHTML = '';
+      cards.forEach((filename, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'card-option';
+
+        const frame = document.createElement('div');
+        frame.className = 'card-option__frame';
+        const img = document.createElement('img');
+        img.src = animalImageSrc(filename);
+        img.alt = filename;
+        frame.appendChild(img);
+
+        const priceEl = document.createElement('div');
+        priceEl.className = 'card-option__price';
+        priceEl.textContent = formatPrice(prices[idx]);
+
+        btn.appendChild(frame);
+        btn.appendChild(priceEl);
+        btn.addEventListener('click', () => handleSubgameBChoice(idx, btn));
+        optionsEl.appendChild(btn);
+      });
+    }
+
+    function handleSubgameBChoice(idx, btnEl) {
+      if (locked) return;
+      if (!currentRound || currentRound.type !== 'B') return;
+      if (idx === currentRound.correctIdx) {
+        // Award a fresh unowned card — display cards are decorative per spec
+        const awarded = (Rewards.pickCards(1)[0]) || currentRound.cards[idx];
+        handleCorrect(awarded);
+      } else {
+        Sounds.wrong();
+        showFeedback('Not quite — new coins and new cards!', 'wrong');
+        // Shake only the wrong card
+        btnEl.classList.remove('shake');
+        void btnEl.offsetWidth;
+        btnEl.classList.add('shake');
+        // Lock all options so the child can't re-select on the same round
+        document.querySelectorAll('.card-option').forEach((b) => (b.disabled = true));
+        // Generate an entirely new set of coins + cards + prices
+        setTimeout(() => { newRound(); }, 1400);
+      }
+    }
+
+    // ---------- Shared handlers ----------
+    function setPrompt(text) {
+      document.getElementById('prompt').textContent = text;
+    }
+
+    function clearFeedback() {
+      document.getElementById('feedback-slot').innerHTML = '';
+    }
+    function showFeedback(msg, variant) {
+      const slot = document.getElementById('feedback-slot');
+      slot.innerHTML = `<div class="feedback feedback--${variant} fade-in-up">${msg}</div>`;
+    }
+
+    function refreshPointsUI() {
+      const s = State.get();
+      const pts = s.modules[MODULE_KEY].points;
+      document.getElementById('points-badge').textContent = `${pts} / ${GOAL}`;
+      document.getElementById('progress-fill').style.width = (pts / GOAL * 100) + '%';
+    }
+
+    function fireConfetti() {
+      if (typeof confetti !== 'function') return;
+      confetti({
+        particleCount: 120,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#E700FF', '#7FD8D7', '#E8B842']
+      });
+    }
+
+    function showCompletionOverlay() {
+      fireConfetti();
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <h2 class="modal__title">Module Complete!</h2>
+        <p class="feedback feedback--growth fade-in-up">You mastered Coins!</p>
+        <div style="margin-top: var(--space-5);">
+          <a class="btn btn--primary" href="../../index.html">Back to portal</a>
+        </div>
+      `;
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+    }
+
+    function handleCorrect(cardFilename) {
+      Sounds.correct();
+      locked = true;
+
+      const s = State.get();
+      s.modules[MODULE_KEY].points += 1;
+      const pts = s.modules[MODULE_KEY].points;
+      if (pts >= GOAL) {
+        s.modules[MODULE_KEY].points = GOAL;
+        s.modules[MODULE_KEY].complete = true;
+      }
+      State.save(s);
+      refreshPointsUI();
+
+      // Direct card reward (auto-dismisses in ~3.6s)
+      setTimeout(() => Rewards.showDirectCard(cardFilename), 250);
+
+      // Advance after the direct-card modal has had time to fully display
+      setTimeout(() => {
+        locked = false;
+        if (s.modules[MODULE_KEY].complete) {
+          Sounds.moduleComplete();
+          setTimeout(showCompletionOverlay, 400);
+        } else {
+          newRound();
+        }
+      }, 4100);
+    }
+
+    // ---------- Wire up ----------
+    document.getElementById('buy-btn').addEventListener('click', submitSubgameA);
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      if (!currentRound) return;
+      if (currentRound.type === 'A') submitSubgameA();
+    });
+
+    refreshPointsUI();
+    newRound();
+  </script>
+</body>
+</html>

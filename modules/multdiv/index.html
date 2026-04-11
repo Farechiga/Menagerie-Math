@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplication & Division</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .page { position: relative; z-index: 1; }
+
+    .module-header {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto var(--space-5);
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .module-header__icon {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+    .module-header__title {
+      font-size: var(--text-xl);
+      font-weight: 900;
+      margin: 0;
+    }
+    .points-badge {
+      background: var(--teal);
+      color: var(--white);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      font-size: var(--text-base);
+      box-shadow: var(--shadow-sm);
+    }
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-full);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: var(--text-lg);
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+    .icon-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--magenta);
+      text-decoration: none;
+    }
+    .icon-btn img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+
+    .prompt {
+      text-align: center;
+      font-size: var(--text-3xl);
+      font-weight: 900;
+      color: var(--ink);
+      margin: var(--space-4) 0 var(--space-5);
+    }
+
+    /* Matrix grid — black "L" around top header + left labels; colored data cells;
+       skip-count column sits outside against the page background. */
+    .matrix-wrap {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      overflow-x: auto;
+      padding: var(--space-2) 0;
+    }
+    .matrix-row {
+      display: flex;
+      align-items: stretch;
+      gap: var(--space-4);
+      width: fit-content;
+      margin: 0 auto;
+    }
+    .matrix-grid {
+      display: grid;
+      gap: 2px;
+      padding: 2px 0 0 2px;
+      background: #000;
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+    }
+    .matrix-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 42px;
+      min-height: 42px;
+      font-family: var(--font-sans);
+      font-weight: 800;
+      font-size: var(--text-base);
+      box-sizing: border-box;
+    }
+    .matrix-cell--header {
+      background: #000;
+      color: #fff;
+    }
+    .matrix-cell--data {
+      color: rgba(255, 255, 255, 0.18);
+      font-size: var(--text-xs);
+      font-weight: 700;
+    }
+    @media (max-width: 560px) {
+      .matrix-cell { min-width: 32px; min-height: 32px; font-size: var(--text-sm); }
+    }
+
+    .skip-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-top: 2px;
+    }
+    .skip-col__spacer { min-height: 42px; }
+    .skip-col__cell {
+      min-height: 42px;
+      min-width: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: var(--text-xl);
+      color: var(--ink);
+    }
+    .skip-col__cell--blank {
+      color: var(--magenta);
+      font-size: var(--text-2xl);
+    }
+    @media (max-width: 560px) {
+      .skip-col__spacer, .skip-col__cell { min-height: 32px; }
+      .skip-col__cell { min-width: 44px; font-size: var(--text-lg); }
+      .skip-col__cell--blank { font-size: var(--text-xl); }
+    }
+
+    .answer-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-6);
+    }
+    #answer-input {
+      max-width: 160px;
+    }
+
+    .feedback-slot {
+      min-height: 42px;
+      margin-top: var(--space-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .progress-slot {
+      width: 100%;
+      max-width: 480px;
+      margin: var(--space-6) auto 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="module-header">
+      <img class="module-header__icon" src="../../assets/module_icons/MultDiv.png" alt="">
+      <h1 class="module-header__title">Multiplication &amp; Division</h1>
+      <span class="points-badge" id="points-badge">0 / 20</span>
+      <a class="icon-btn" href="../../menagerie/index.html" aria-label="Menagerie" title="My Menagerie"><img src="../../assets/module_icons/Menagerie.png" alt=""></a>
+    </header>
+
+    <div class="container">
+      <div class="prompt" id="prompt">&nbsp;</div>
+
+      <div class="matrix-wrap">
+        <div class="matrix-row">
+          <div class="matrix-grid" id="matrix-grid"></div>
+          <div class="skip-col" id="skip-col"></div>
+        </div>
+      </div>
+
+      <div class="answer-area">
+        <input
+          id="answer-input"
+          class="input input--digit"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          autocomplete="off"
+          aria-label="Your answer"
+        >
+        <button class="btn btn--primary" id="submit-btn">Check</button>
+      </div>
+
+      <div class="feedback-slot" id="feedback-slot"></div>
+
+      <div class="progress-slot">
+        <div class="progress"><div class="progress__fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="row" style="justify-content: center; margin-top: var(--space-5);">
+        <a class="btn btn--ghost btn--sm" href="../../index.html">&larr; Back to portal</a>
+      </div>
+    </div>
+  </main>
+
+  <canvas id="confetti-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:200;"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="../../shared/state.js"></script>
+  <script src="../../shared/sounds.js"></script>
+  <script src="../../shared/rewards.js"></script>
+  <script>
+    const MODULE_KEY = 'multdiv';
+    const GOAL = 10;
+    const CARD_THRESHOLDS = new Set([2, 4, 6, 8, 10]);
+
+    const ROW_COLORS = [
+      '#8B0000', '#CC2200', '#E85500', '#C8900A',
+      '#1A6B1A', '#1A8C5A', '#1A8C8C', '#1A5CB8',
+      '#1A1A8C', '#4B0082', '#7B1FA2', '#C2185B'
+    ];
+
+    const FACTOR_WEIGHTS = [
+      [1, 2], [2, 3], [3, 8], [4, 10], [5, 15], [6, 10],
+      [7, 15], [8, 10], [9, 15], [10, 2], [11, 5], [12, 5]
+    ];
+    const WEIGHT_SUM = FACTOR_WEIGHTS.reduce((s, [, w]) => s + w, 0);
+
+    function sampleFactor() {
+      let r = Math.random() * WEIGHT_SUM;
+      for (const [f, w] of FACTOR_WEIGHTS) {
+        r -= w;
+        if (r <= 0) return f;
+      }
+      return FACTOR_WEIGHTS[FACTOR_WEIGHTS.length - 1][0];
+    }
+
+    const GRIT_MESSAGES = [
+      'Stick with it!',
+      'Try a different approach',
+      'Almost — keep going!',
+      "You've got this!",
+      'Think it through!'
+    ];
+    function randomGrit() {
+      return GRIT_MESSAGES[Math.floor(Math.random() * GRIT_MESSAGES.length)];
+    }
+
+    let currentRound = null;
+
+    function generateRound() {
+      const isMult = Math.random() < 0.5;
+      const A = sampleFactor();
+      const B = sampleFactor();
+      if (isMult) {
+        return { type: 'mult', A, B, answer: A * B, prompt: `${A} × ${B} = ?` };
+      } else {
+        const C = A * B;
+        return { type: 'div', A, B, product: C, answer: A, prompt: `${C} ÷ ${B} = ?` };
+      }
+    }
+
+    function renderMatrix(round) {
+      const { A, B, type } = round;
+      const gridEl = document.getElementById('matrix-grid');
+      const skipEl = document.getElementById('skip-col');
+      gridEl.innerHTML = '';
+      skipEl.innerHTML = '';
+
+      // Grid layout: (B + 1) columns — label col + B data cols
+      gridEl.style.gridTemplateColumns = `repeat(${B + 1}, minmax(42px, auto))`;
+
+      // Color is set by the COLUMN factor B (the times table being practiced)
+      const cellColor = ROW_COLORS[(B - 1) % ROW_COLORS.length];
+
+      // Header row: 0, 1, 2, ..., B
+      for (let c = 0; c <= B; c++) {
+        const h = document.createElement('div');
+        h.className = 'matrix-cell matrix-cell--header';
+        h.textContent = String(c);
+        gridEl.appendChild(h);
+      }
+
+      // Data rows 1..A — row label + B colored cells (all same color)
+      for (let r = 1; r <= A; r++) {
+        const label = document.createElement('div');
+        label.className = 'matrix-cell matrix-cell--header';
+        label.textContent = String(r);
+        gridEl.appendChild(label);
+
+        for (let c = 1; c <= B; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'matrix-cell matrix-cell--data';
+          cell.style.background = cellColor;
+          const isAnswerCell = type === 'mult' && r === A && c === B;
+          if (!isAnswerCell) cell.textContent = String((r - 1) * B + c);
+          gridEl.appendChild(cell);
+        }
+      }
+
+      // Skip-count column: a spacer aligning with header row, then A cells
+      const spacer = document.createElement('div');
+      spacer.className = 'skip-col__spacer';
+      skipEl.appendChild(spacer);
+
+      for (let r = 1; r <= A; r++) {
+        const cell = document.createElement('div');
+        const isBlank = type === 'mult' && r === A;
+        if (isBlank) {
+          cell.className = 'skip-col__cell skip-col__cell--blank';
+          cell.textContent = '?';
+        } else {
+          cell.className = 'skip-col__cell';
+          cell.textContent = String(r * B);
+        }
+        skipEl.appendChild(cell);
+      }
+    }
+
+    function setPrompt(text) {
+      document.getElementById('prompt').textContent = text;
+    }
+
+    function refreshPointsUI() {
+      const s = State.get();
+      const pts = s.modules[MODULE_KEY].points;
+      document.getElementById('points-badge').textContent = `${pts} / ${GOAL}`;
+      document.getElementById('progress-fill').style.width = (pts / GOAL * 100) + '%';
+    }
+
+    function clearFeedback() {
+      document.getElementById('feedback-slot').innerHTML = '';
+    }
+    function showFeedback(msg, variant) {
+      const slot = document.getElementById('feedback-slot');
+      slot.innerHTML = `<div class="feedback feedback--${variant} fade-in-up">${msg}</div>`;
+    }
+
+    function nextRound() {
+      clearFeedback();
+      const input = document.getElementById('answer-input');
+      input.value = '';
+      input.disabled = false;
+      input.focus();
+      currentRound = generateRound();
+      setPrompt(currentRound.prompt);
+      renderMatrix(currentRound);
+    }
+
+    function fireConfetti() {
+      if (typeof confetti !== 'function') return;
+      confetti({
+        particleCount: 120,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#E700FF', '#7FD8D7', '#E8B842']
+      });
+    }
+
+    function showCompletionOverlay() {
+      fireConfetti();
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <h2 class="modal__title">Module Complete!</h2>
+        <p class="feedback feedback--growth fade-in-up">You mastered Multiplication &amp; Division!</p>
+        <div style="margin-top: var(--space-5);">
+          <a class="btn btn--primary" href="../../index.html">Back to portal</a>
+        </div>
+      `;
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+    }
+
+    function handleCorrect() {
+      Sounds.correct();
+      showFeedback('Correct!', 'correct');
+
+      const s = State.get();
+      const prevPts = s.modules[MODULE_KEY].points;
+      s.modules[MODULE_KEY].points = Math.min(prevPts + 1, GOAL);
+      const pts = s.modules[MODULE_KEY].points;
+      if (pts >= GOAL) s.modules[MODULE_KEY].complete = true;
+      State.save(s);
+      refreshPointsUI();
+      const crossedThreshold = pts > prevPts && CARD_THRESHOLDS.has(pts);
+
+      const input = document.getElementById('answer-input');
+      input.disabled = true;
+
+      const doNext = () => {
+        if (s.modules[MODULE_KEY].complete) {
+          Sounds.moduleComplete();
+          setTimeout(showCompletionOverlay, 400);
+        } else {
+          setTimeout(nextRound, 650);
+        }
+      };
+
+      if (crossedThreshold) {
+        setTimeout(() => {
+          Rewards.showCardPickModal(() => doNext());
+        }, 500);
+      } else {
+        doNext();
+      }
+    }
+
+    function handleWrong() {
+      Sounds.wrong();
+      showFeedback(randomGrit(), 'wrong');
+      const input = document.getElementById('answer-input');
+      input.classList.remove('shake');
+      void input.offsetWidth;
+      input.classList.add('shake');
+      input.select();
+    }
+
+    function submit() {
+      if (!currentRound) return;
+      const input = document.getElementById('answer-input');
+      const raw = input.value.trim();
+      if (raw === '') return;
+      const val = Number(raw);
+      if (!Number.isFinite(val)) { handleWrong(); return; }
+      if (val === currentRound.answer) handleCorrect();
+      else handleWrong();
+    }
+
+    document.getElementById('submit-btn').addEventListener('click', submit);
+    document.getElementById('answer-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    });
+
+    // Initial state — if already complete, show the overlay but still allow practice
+    refreshPointsUI();
+    const startState = State.get();
+    if (startState.modules[MODULE_KEY].complete) {
+      // Already done — still let child practice, but don't increment beyond 20
+    }
+    nextRound();
+  </script>
+</body>
+</html>

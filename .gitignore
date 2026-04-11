@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+.fseventsd
+.localized
+
+# iCloud Drive placeholder files
+*.icloud
+.icloud/
+
+# Affinity Designer lock / temp files
+*~lock~
+*.af~lock~
+
+# Editor cruft
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Build / temp
+node_modules/
+dist/
+*.log

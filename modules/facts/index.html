@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fact Families</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .page { position: relative; z-index: 1; }
+
+    .module-header {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto var(--space-5);
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .module-header__icon {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+    .module-header__title {
+      font-size: var(--text-xl);
+      font-weight: 900;
+      margin: 0;
+    }
+    .points-badge {
+      background: var(--teal);
+      color: var(--white);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      font-size: var(--text-base);
+      box-shadow: var(--shadow-sm);
+    }
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      background: var(--white);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-full);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: var(--text-lg);
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+    .icon-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--magenta);
+      text-decoration: none;
+    }
+    .icon-btn img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+
+    /* Game container */
+    #game-container {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-6) var(--space-5);
+      background: var(--surface-strong);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      border: 4px solid transparent;
+      text-align: center;
+      transition: border-color var(--transition-base);
+    }
+    #game-container.correct-pulse {
+      border-color: var(--success);
+    }
+
+    .instruction {
+      font-size: var(--text-xl);
+      color: var(--ink-soft);
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-3);
+    }
+    .instr-tag {
+      background: var(--magenta-soft);
+      color: var(--magenta-deep);
+      padding: var(--space-2) var(--space-5);
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      font-size: var(--text-base);
+    }
+
+    /* Triangle visualization */
+    .triangle-container {
+      position: relative;
+      width: 300px;
+      height: 260px;
+      margin: var(--space-4) auto var(--space-5);
+    }
+    .node {
+      position: absolute;
+      width: 86px;
+      height: 86px;
+      background: var(--white);
+      border: 5px solid var(--teal);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: var(--text-2xl);
+      font-weight: 900;
+      color: var(--ink);
+      z-index: 2;
+      box-shadow: var(--shadow-sm);
+    }
+    .node.peak {
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      border-color: var(--magenta);
+    }
+    .node.base-l { bottom: 0; left: 0; }
+    .node.base-r { bottom: 0; right: 0; }
+
+    .line {
+      position: absolute;
+      background: var(--line);
+      z-index: 1;
+    }
+    .line-l {
+      width: 4px; height: 190px;
+      top: 45px; left: 82px;
+      transform: rotate(34deg);
+      transform-origin: top;
+    }
+    .line-r {
+      width: 4px; height: 190px;
+      top: 45px; right: 82px;
+      transform: rotate(-34deg);
+      transform-origin: top;
+    }
+    .line-b {
+      height: 4px; width: 180px;
+      bottom: 42px; left: 60px;
+    }
+
+    #user-answer {
+      max-width: 160px;
+    }
+
+    .answer-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-3);
+    }
+
+    .feedback-slot {
+      min-height: 42px;
+      margin-top: var(--space-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .progress-slot {
+      width: 100%;
+      max-width: 480px;
+      margin: var(--space-6) auto 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="module-header">
+      <img class="module-header__icon" src="../../assets/module_icons/Facts.png" alt="">
+      <h1 class="module-header__title">Fact Families</h1>
+      <span class="points-badge" id="points-badge">0 / 20</span>
+      <a class="icon-btn" href="../../menagerie/index.html" aria-label="Menagerie" title="My Menagerie"><img src="../../assets/module_icons/Menagerie.png" alt=""></a>
+    </header>
+
+    <div class="container">
+      <div id="game-container">
+        <h2 class="instruction" id="instruction">&nbsp;</h2>
+
+        <div id="display-area"></div>
+
+        <div class="answer-area">
+          <input
+            type="text"
+            id="user-answer"
+            class="input input--digit"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            autocomplete="off"
+            placeholder="?"
+            aria-label="Your answer"
+          >
+          <button class="btn btn--primary" id="submit-btn">Check</button>
+        </div>
+
+        <div class="feedback-slot" id="feedback-slot"></div>
+      </div>
+
+      <div class="progress-slot">
+        <div class="progress"><div class="progress__fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="row" style="justify-content: center; margin-top: var(--space-5);">
+        <a class="btn btn--ghost btn--sm" href="../../index.html">&larr; Back to portal</a>
+      </div>
+    </div>
+  </main>
+
+  <canvas id="confetti-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:200;"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="../../shared/state.js"></script>
+  <script src="../../shared/sounds.js"></script>
+  <script src="../../shared/rewards.js"></script>
+  <script>
+    const MODULE_KEY = 'facts';
+    const GOAL = 10;
+    const CARD_THRESHOLDS = new Set([2, 4, 6, 8, 10]);
+
+    const GRIT_MESSAGES = [
+      'Stick with it!',
+      'Try a different approach',
+      'Almost — keep going!',
+      "You've got this!",
+      'Think it through!'
+    ];
+    function randomGrit() {
+      return GRIT_MESSAGES[Math.floor(Math.random() * GRIT_MESSAGES.length)];
+    }
+
+    let currentFamily = {};
+
+    // Universal validity check — preserved from Ref_MathFacts
+    function getValidRules(a, b, c) {
+      const isAdd = (parseInt(a) + parseInt(b) === parseInt(c));
+      const isMult = (parseInt(a) * parseInt(b) === parseInt(c));
+      return { isAdd, isMult, any: isAdd || isMult };
+    }
+
+    // Adapted from Ref_MathFacts — FILL mode only (forceFake removed)
+    function generateFamily() {
+      const isMult = Math.random() > 0.5;
+      const a = Math.floor(Math.random() * 8) + 2;
+      const b = Math.floor(Math.random() * 8) + 2;
+      const c = isMult ? (a * b) : (a + b);
+      const intendedType = isMult ? '×' : '+';
+      const intendedInv = isMult ? '÷' : '-';
+      return { a, b, c, intendedType, intendedInv };
+    }
+
+    // Adapted from Ref_MathFacts — restyled nodes but same structure
+    function renderTriangle(family, hiddenKey = null) {
+      document.getElementById('display-area').innerHTML = `
+        <div class="triangle-container">
+          <div class="line line-l"></div>
+          <div class="line line-r"></div>
+          <div class="line line-b"></div>
+          <div class="node peak">${hiddenKey === 'c' ? '?' : family.c}</div>
+          <div class="node base-l">${hiddenKey === 'a' ? '?' : family.a}</div>
+          <div class="node base-r">${hiddenKey === 'b' ? '?' : family.b}</div>
+        </div>
+      `;
+    }
+
+    function setPrompt(hidden, type) {
+      let label;
+      if (hidden === 'c') {
+        label = (type === '×') ? 'MULTIPLY' : 'ADD';
+      } else {
+        label = (type === '×') ? 'MULTIPLY / DIVIDE' : 'ADD / SUBTRACT';
+      }
+      document.getElementById('instruction').innerHTML =
+        `<span class="instr-tag">${label}</span>`;
+    }
+
+    function refreshPointsUI() {
+      const s = State.get();
+      const pts = s.modules[MODULE_KEY].points;
+      document.getElementById('points-badge').textContent = `${pts} / ${GOAL}`;
+      document.getElementById('progress-fill').style.width = (pts / GOAL * 100) + '%';
+    }
+
+    function clearFeedback() {
+      document.getElementById('feedback-slot').innerHTML = '';
+    }
+    function showFeedback(msg, variant) {
+      const slot = document.getElementById('feedback-slot');
+      slot.innerHTML = `<div class="feedback feedback--${variant} fade-in-up">${msg}</div>`;
+    }
+
+    function newRound() {
+      clearFeedback();
+      const input = document.getElementById('user-answer');
+      input.value = '';
+      input.disabled = false;
+      const container = document.getElementById('game-container');
+      container.classList.remove('correct-pulse');
+
+      currentFamily = generateFamily();
+      const hidden = ['a', 'b', 'c'][Math.floor(Math.random() * 3)];
+      currentFamily.hidden = hidden;
+
+      setPrompt(hidden, currentFamily.intendedType);
+      renderTriangle(currentFamily, hidden);
+      input.focus();
+    }
+
+    function fireConfetti() {
+      if (typeof confetti !== 'function') return;
+      confetti({
+        particleCount: 120,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#E700FF', '#7FD8D7', '#E8B842']
+      });
+    }
+
+    function showCompletionOverlay() {
+      fireConfetti();
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <h2 class="modal__title">Module Complete!</h2>
+        <p class="feedback feedback--growth fade-in-up">You mastered Fact Families!</p>
+        <div style="margin-top: var(--space-5);">
+          <a class="btn btn--primary" href="../../index.html">Back to portal</a>
+        </div>
+      `;
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+    }
+
+    function handleCorrect() {
+      Sounds.correct();
+      showFeedback('Correct!', 'correct');
+      document.getElementById('game-container').classList.add('correct-pulse');
+
+      const s = State.get();
+      const prevPts = s.modules[MODULE_KEY].points;
+      s.modules[MODULE_KEY].points = Math.min(prevPts + 1, GOAL);
+      const pts = s.modules[MODULE_KEY].points;
+      if (pts >= GOAL) s.modules[MODULE_KEY].complete = true;
+      State.save(s);
+      refreshPointsUI();
+      // Only award a card when we actually CROSS a threshold — prevents
+      // spamming cards on a completed module where points stay capped at GOAL.
+      const crossedThreshold = pts > prevPts && CARD_THRESHOLDS.has(pts);
+
+      const input = document.getElementById('user-answer');
+      input.disabled = true;
+
+      const doNext = () => {
+        if (s.modules[MODULE_KEY].complete) {
+          Sounds.moduleComplete();
+          setTimeout(showCompletionOverlay, 400);
+        } else {
+          setTimeout(newRound, 700);
+        }
+      };
+
+      if (crossedThreshold) {
+        setTimeout(() => {
+          Rewards.showCardPickModal(() => doNext());
+        }, 500);
+      } else {
+        doNext();
+      }
+    }
+
+    function handleWrong() {
+      Sounds.wrong();
+      showFeedback(randomGrit(), 'wrong');
+      const container = document.getElementById('game-container');
+      container.classList.remove('shake');
+      void container.offsetWidth;
+      container.classList.add('shake');
+      setTimeout(() => container.classList.remove('shake'), 500);
+      const input = document.getElementById('user-answer');
+      input.select();
+    }
+
+    // Adapted from Ref_MathFacts — universal validity check preserved
+    function checkAnswer() {
+      const raw = document.getElementById('user-answer').value.trim();
+      if (raw === '') return;
+      const val = parseInt(raw, 10);
+      if (!Number.isFinite(val)) { handleWrong(); return; }
+
+      const f = { ...currentFamily };
+      f[f.hidden] = val;
+
+      const rules = getValidRules(f.a, f.b, f.c);
+      if (rules.any) {
+        currentFamily.a = f.a; currentFamily.b = f.b; currentFamily.c = f.c;
+        currentFamily.intendedType = rules.isMult ? '×' : '+';
+        currentFamily.intendedInv = rules.isMult ? '÷' : '-';
+        handleCorrect();
+      } else {
+        handleWrong();
+      }
+    }
+
+    document.getElementById('submit-btn').addEventListener('click', checkAnswer);
+    document.getElementById('user-answer').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); checkAnswer(); }
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.activeElement !== document.getElementById('user-answer')) {
+        checkAnswer();
+      }
+    });
+
+    refreshPointsUI();
+    newRound();
+  </script>
+</body>
+</html>

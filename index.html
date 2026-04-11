@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3rd Grade Math Portal</title>
+  <link rel="stylesheet" href="shared/style.css">
+  <style>
+    .portal-header {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto var(--space-6);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+    .portal-logo {
+      height: 64px;
+      width: auto;
+      display: block;
+    }
+    @media (max-width: 560px) {
+      .portal-logo { height: 48px; }
+    }
+    .menagerie-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+      background: var(--white);
+      border: 2px solid var(--teal);
+      border-radius: var(--radius-full);
+      color: var(--teal-deep);
+      font-family: inherit;
+      font-size: var(--text-base);
+      font-weight: 800;
+      box-shadow: var(--shadow-sm);
+      text-decoration: none;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+    }
+    .menagerie-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      background: var(--teal-soft);
+      text-decoration: none;
+    }
+    .menagerie-btn__icon {
+      width: 28px;
+      height: 28px;
+      display: inline-block;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+    .menagerie-btn__count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 var(--space-2);
+      background: var(--magenta);
+      color: var(--white);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 900;
+    }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-6);
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    @media (max-width: 560px) {
+      .module-grid { grid-template-columns: 1fr; gap: var(--space-4); }
+    }
+
+    .tile {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: var(--surface-strong);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 3px solid transparent;
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform var(--transition-fast),
+                  box-shadow var(--transition-fast),
+                  border-color var(--transition-fast),
+                  filter var(--transition-fast);
+      font-family: inherit;
+    }
+    .tile:hover:not(.tile--locked) {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--magenta);
+    }
+    .tile:active:not(.tile--locked) { transform: translateY(-1px) scale(1.01); }
+
+    .tile__icon {
+      width: 70%;
+      height: 70%;
+      object-fit: contain;
+      pointer-events: none;
+      mix-blend-mode: multiply;
+      transition: filter var(--transition-fast);
+    }
+    .tile:hover:not(.tile--locked) .tile__icon {
+      /* Recolor icon to teal (#7FD8D7) */
+      filter: brightness(0) saturate(100%) invert(88%) sepia(21%) saturate(501%) hue-rotate(134deg) brightness(94%) contrast(82%);
+      mix-blend-mode: normal;
+    }
+
+    .tile--locked {
+      cursor: not-allowed;
+      filter: grayscale(1);
+      opacity: 0.55;
+    }
+
+    .tile__badge {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 900;
+      box-shadow: var(--shadow-sm);
+    }
+    .tile__badge--locked   { background: var(--lock-gray);    color: var(--ink-soft); }
+    .tile__badge--progress { background: var(--teal);         color: var(--white); }
+    .tile__badge--complete {
+      background: var(--gold);
+      color: var(--white);
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      justify-content: center;
+      font-size: var(--text-lg);
+    }
+
+    .overall-progress {
+      width: 100%;
+      max-width: 720px;
+      margin: var(--space-8) auto 0;
+    }
+    .overall-progress__label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .page { position: relative; z-index: 1; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="portal-header">
+      <img class="portal-logo" src="assets/MasteringMathLogo.png" alt="Mastering Math">
+      <a class="menagerie-btn" href="menagerie/index.html" aria-label="Open menagerie">
+        <img class="menagerie-btn__icon" src="assets/module_icons/Menagerie.png" alt="" aria-hidden="true">
+        <span>My Menagerie</span>
+        <span class="menagerie-btn__count" id="menagerie-count">0</span>
+      </a>
+    </header>
+
+    <div class="module-grid" id="module-grid"></div>
+
+    <div class="overall-progress">
+      <div class="overall-progress__label">
+        <span>Portal progress</span>
+        <span id="overall-progress-text">0 / 40</span>
+      </div>
+      <div class="progress">
+        <div class="progress__fill" id="overall-progress-fill" style="width: 0%;"></div>
+      </div>
+    </div>
+  </main>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="shared/state.js"></script>
+  <script src="shared/sounds.js"></script>
+  <script src="shared/rewards.js"></script>
+  <script>
+    const MODULES = [
+      { key: 'time',    name: 'Time',            icon: 'assets/module_icons/Time.png',    href: 'modules/time/index.html' },
+      { key: 'coins',   name: 'Coins',           icon: 'assets/module_icons/Coins.png',   href: 'modules/coins/index.html' },
+      { key: 'facts',   name: 'Fact Family',     icon: 'assets/module_icons/Facts.png',   href: 'modules/facts/index.html' },
+      { key: 'multdiv', name: 'Multiply/Divide', icon: 'assets/module_icons/MultDiv.png', href: 'modules/multdiv/index.html' }
+    ];
+
+    const POINTS_PER_MODULE = 10;
+
+    function activeModuleKey(state) {
+      for (const m of MODULES) {
+        const s = state.modules[m.key];
+        if (s.points > 0 && !s.complete) return m.key;
+      }
+      return null;
+    }
+
+    function renderTiles() {
+      const state = State.get();
+      const grid = document.getElementById('module-grid');
+      grid.innerHTML = '';
+
+      const active = activeModuleKey(state);
+
+      MODULES.forEach(m => {
+        const s = state.modules[m.key];
+        const isActive = active === m.key;
+        const isComplete = s.complete;
+        const isInProgress = isActive && !isComplete;
+        const isLocked = active !== null && !isActive && !isComplete;
+
+        const tile = document.createElement(isLocked ? 'div' : 'a');
+        tile.className = 'tile' + (isLocked ? ' tile--locked' : '');
+        if (!isLocked) {
+          tile.href = m.href;
+        } else {
+          tile.setAttribute('aria-disabled', 'true');
+        }
+        tile.setAttribute('aria-label', m.name);
+
+        const img = document.createElement('img');
+        img.className = 'tile__icon';
+        img.src = m.icon;
+        img.alt = m.name;
+        tile.appendChild(img);
+
+        if (isLocked) {
+          const badge = document.createElement('span');
+          badge.className = 'tile__badge tile__badge--locked';
+          badge.innerHTML = '&#128274; Locked';
+          tile.appendChild(badge);
+        } else if (isComplete) {
+          const badge = document.createElement('span');
+          badge.className = 'tile__badge tile__badge--complete';
+          badge.setAttribute('aria-label', 'Complete');
+          badge.innerHTML = '&#10003;';
+          tile.appendChild(badge);
+        } else if (isInProgress) {
+          const badge = document.createElement('span');
+          badge.className = 'tile__badge tile__badge--progress';
+          badge.textContent = `${s.points} / ${POINTS_PER_MODULE}`;
+          tile.appendChild(badge);
+        }
+
+        grid.appendChild(tile);
+      });
+    }
+
+    function renderOverallProgress() {
+      const state = State.get();
+      const total = MODULES.reduce((sum, m) => sum + Math.min(state.modules[m.key].points, POINTS_PER_MODULE), 0);
+      const max = MODULES.length * POINTS_PER_MODULE;
+      const pct = (total / max) * 100;
+      document.getElementById('overall-progress-fill').style.width = pct + '%';
+      document.getElementById('overall-progress-text').textContent = `${total} / ${max}`;
+    }
+
+    function renderMenagerieCount() {
+      const state = State.get();
+      document.getElementById('menagerie-count').textContent = state.menagerie.length;
+    }
+
+    function allComplete() {
+      const state = State.get();
+      return MODULES.every(m => state.modules[m.key].complete);
+    }
+
+    function portalCompleteCelebration() {
+      if (typeof Sounds !== 'undefined') Sounds.portalComplete();
+
+      const duration = 4000;
+      const end = Date.now() + duration;
+      (function frame() {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 70,
+          origin: { x: 0, y: 0.7 },
+          colors: ['#E700FF', '#7FD8D7', '#E8B842']
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 70,
+          origin: { x: 1, y: 0.7 },
+          colors: ['#E700FF', '#7FD8D7', '#E8B842']
+        });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <h2 class="modal__title">Portal Complete!</h2>
+        <p class="feedback feedback--growth fade-in-up">You finished all four modules — amazing work!</p>
+        <div style="margin-top: var(--space-5);">
+          <a class="btn btn--primary" href="menagerie/index.html">See your full menagerie</a>
+        </div>
+        <button class="btn btn--ghost btn--sm" id="close-portal-complete" style="margin-top: var(--space-3);">Close</button>
+      `;
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+      modal.querySelector('#close-portal-complete').addEventListener('click', () => {
+        document.body.removeChild(backdrop);
+      });
+    }
+
+    renderTiles();
+    renderOverallProgress();
+    renderMenagerieCount();
+    if (allComplete()) portalCompleteCelebration();
+  </script>
+
+</body>
+</html>

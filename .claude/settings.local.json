@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v -E \"^style\\\\.css$\")",
+      "Bash(gh auth:*)",
+      "Bash(git --version)"
+    ]
+  }
+}

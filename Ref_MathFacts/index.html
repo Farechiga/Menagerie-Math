@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Fact Families</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab, #9b59b6);
+            --teal: #23a6d5;
+            --pink: #e73c7e;
+            --vivid-magenta: #FF00FF; 
+            --overlay-bg: rgba(20, 20, 20, 0.88);
+        }
+
+        #puppy-logo { position: fixed; top: 20px; left: 20px; width: 140px; z-index: 9999; mix-blend-mode: multiply; }
+        
+        /* SCORING */
+        #scoreboard {
+            position: fixed; top: 20px; right: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 25px; border-radius: 20px;
+            font-size: 1.5rem; font-weight: bold; color: var(--teal);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 9999;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            background: var(--bg-gradient); background-size: 400% 400%;
+            animation: gradientBG 17s ease infinite; overflow: hidden;
+        }
+
+        @keyframes gradientBG { 0% {background-position: 0% 50%;} 50% {background-position: 100% 50%;} 100% {background-position: 0% 50%;} }
+
+        #game-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem; border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center; width: 90%; max-width: 800px; min-height: 520px;
+            position: relative; transition: border 0.3s;
+            border: 8px solid transparent;
+        }
+
+        /* TRIANGLE VISUALIZATION */
+        .triangle-container { position: relative; width: 300px; height: 250px; margin: 20px auto; }
+        .node {
+            position: absolute; width: 80px; height: 80px;
+            background: white; border: 4px solid var(--teal);
+            border-radius: 50%; display: flex; justify-content: center;
+            align-items: center; font-size: 1.8rem; font-weight: bold;
+            z-index: 2;
+        }
+        .peak { top: 0; left: 50%; transform: translateX(-50%); border-color: var(--pink); }
+        .base-l { bottom: 0; left: 0; }
+        .base-r { bottom: 0; right: 0; }
+
+        .line { position: absolute; background: #ddd; z-index: 1; }
+        .line-l { width: 4px; height: 180px; top: 40px; left: 80px; transform: rotate(35deg); transform-origin: top; }
+        .line-r { width: 4px; height: 180px; top: 40px; right: 80px; transform: rotate(-35deg); transform-origin: top; }
+        .line-b { height: 4px; width: 180px; bottom: 40px; left: 60px; }
+
+        /* REINFORCEMENT OVERLAY */
+        #success-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--overlay-bg);
+            display: none; flex-direction: column; justify-content: center;
+            align-items: center; z-index: 10000;
+        }
+        .overlay-content {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 60px;
+            color: var(--vivid-magenta); font-size: 3.5rem; font-weight: bold;
+            text-shadow: 0 0 15px rgba(255,0,255,0.4);
+        }
+        .equation-col { display: flex; flex-direction: column; gap: 15px; text-align: center; }
+
+        #instruction { 
+            font-size: 2rem; color: #444; height: 80px; 
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 0;
+        }
+        .instr-tag { background: #eee; padding: 8px 20px; border-radius: 12px; color: var(--pink); font-weight: 800; letter-spacing: 1px;}
+
+        /* CONTROLS */
+        .answer-input { font-size: 2.5rem; width: 140px; padding: 10px; border: 4px solid #eee; border-radius: 15px; text-align: center; outline: none; }
+        .mode-btn { padding: 12px 24px; margin: 8px; cursor: pointer; border-radius: 12px; border: none; background: #f0f0f0; font-weight: bold; font-size: 1rem; }
+        .active-mode { background: var(--teal); color: white; }
+        
+        .correct-pulse { border-color: #23d5ab !important; }
+        .shake { animation: shake 0.5s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+    </style>
+</head>
+<body>
+
+<img src="assets/BernadoodleLogo.png" id="puppy-logo" alt="Math Puppy">
+<div id="scoreboard">Points: 0</div>
+
+<div id="success-overlay" onclick="newRound()">
+    <h1 style="color: white; margin-bottom: 3rem; font-size: 2.5rem;">Family Relationships Identified!</h1>
+    <div class="overlay-content" id="equation-display"></div>
+    <p style="margin-top: 4rem; color: #666; font-size: 1.2rem;">(Tap to continue)</p>
+</div>
+
+<div id="game-container">
+    <div id="mode-selector">
+        <button class="mode-btn active-mode" onclick="setMode('FILL')">Missing Number</button>
+        <button class="mode-btn" onclick="setMode('HUNT')">Imposter Hunt</button>
+        <button class="mode-btn" onclick="setMode('OP')">Add or Multiply?</button>
+    </div>
+
+    <h2 id="instruction"></h2>
+
+    <div id="display-area"></div>
+
+    <div id="control-area" style="margin-top: 20px;">
+        <input type="number" id="user-answer" class="answer-input" placeholder="?">
+        <div id="options-area" style="display:none;"></div>
+    </div>
+</div>
+
+<script>
+let currentMode = 'FILL';
+    let currentFamily = {};
+    let score = 0;
+
+    function updateScore(pts) {
+        score += pts;
+        document.getElementById('scoreboard').innerText = `Points: ${score}`;
+    }
+
+    function triggerConfetti() {
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#ee7752', '#e73c7e', '#23a6d5', '#23d5ab']
+        });
+    }
+
+    // Helper to check if a trio works for ANY math rule
+    function getValidRules(a, b, c) {
+        const isAdd = (parseInt(a) + parseInt(b) === parseInt(c));
+        const isMult = (parseInt(a) * parseInt(b) === parseInt(c));
+        return { isAdd, isMult, any: isAdd || isMult };
+    }
+
+    function generateFamily(forceFake = false) {
+        const isMult = Math.random() > 0.5;
+        const a = Math.floor(Math.random() * 8) + 2;
+        const b = Math.floor(Math.random() * 8) + 2;
+        let c = isMult ? (a * b) : (a + b);
+        
+        if (forceFake) {
+            // Ensure the fake doesn't accidentally become a real family
+            let fakeC = c + (Math.random() > 0.5 ? 2 : -2);
+            while(getValidRules(a, b, fakeC).any) { fakeC++; }
+            c = fakeC;
+        }
+        
+        // We still track the "intended" type for the success overlay
+        const intendedType = isMult ? '×' : '+';
+        const intendedInv = isMult ? '÷' : '-';
+        
+        return { a, b, c, intendedType, intendedInv, isReal: !forceFake };
+    }
+
+    function renderTriangle(family, hiddenKey = null) {
+        document.getElementById('display-area').innerHTML = `
+            <div class="triangle-container">
+                <div class="line line-l"></div><div class="line line-r"></div><div class="line line-b"></div>
+                <div class="node peak">${hiddenKey === 'c' ? '?' : family.c}</div>
+                <div class="node base-l">${hiddenKey === 'a' ? '?' : family.a}</div>
+                <div class="node base-r">${hiddenKey === 'b' ? '?' : family.b}</div>
+            </div>
+        `;
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active-mode'));
+        event.currentTarget.classList.add('active-mode');
+        newRound();
+    }
+
+    function newRound() {
+        document.getElementById('success-overlay').style.display = 'none';
+        const input = document.getElementById('user-answer');
+        const options = document.getElementById('options-area');
+        const container = document.getElementById('game-container');
+        const instrArea = document.getElementById('instruction');
+        
+        container.classList.remove('correct-pulse');
+        input.value = ''; input.style.display = 'none'; options.style.display = 'none';
+
+        if (currentMode === 'FILL') {
+            currentFamily = generateFamily(false);
+            const hidden = ['a', 'b', 'c'][Math.floor(Math.random() * 3)];
+            currentFamily.hidden = hidden;
+
+            // NEW LABELING LOGIC
+            let label = "";
+            if (hidden === 'c') {
+                // Peak is missing (bottom two showing)
+                label = (currentFamily.intendedType === '×') ? "MULTIPLY" : "ADD";
+            } else {
+                // A bottom leg is missing
+                label = (currentFamily.intendedType === '×') ? "MULTIPLY / DIVIDE" : "ADD / SUBTRACT";
+            }
+
+            instrArea.innerHTML = `<span class="instr-tag">${label}</span>`;
+            renderTriangle(currentFamily, hidden);
+            input.style.display = 'inline-block'; input.focus();
+        } 
+        else if (currentMode === 'HUNT') {
+            currentFamily = generateFamily(Math.random() > 0.5);
+            instrArea.innerHTML = `<span class="instr-tag" style="background:#ddd;color:#555">IS THIS A REAL FAMILY?</span>`;
+            renderTriangle(currentFamily);
+            options.style.display = 'block';
+            options.innerHTML = `<button class="mode-btn" style="background:#23d5ab;color:white;font-size:1.5rem;padding:15px 45px" onclick="checkHunt(true)">YES</button>
+                                 <button class="mode-btn" style="background:var(--pink);color:white;font-size:1.5rem;padding:15px 45px" onclick="checkHunt(false)">NO</button>`;
+        }
+        else {
+            currentFamily = generateFamily(false);
+            instrArea.innerHTML = `<span class="instr-tag" style="background:#ddd;color:#555">IDENTIFY THE RULE:</span>`;
+            renderTriangle(currentFamily);
+            options.style.display = 'block';
+            options.innerHTML = `<button class="mode-btn" style="background:var(--teal); color:white;" onclick="checkOp('+')">ADD / SUBTRACT</button>
+                                 <button class="mode-btn" style="background:var(--pink); color:white;" onclick="checkOp('×')">MULTIPLY / DIVIDE</button>`;
+        }
+    }
+
+    function checkAnswer() {
+        const val = parseInt(document.getElementById('user-answer').value);
+        const f = {...currentFamily};
+        f[f.hidden] = val; // Apply the user's answer to a test object
+
+        // Universal Check: Does the trio work for ANY rule?
+        const rules = getValidRules(f.a, f.b, f.c);
+        if (rules.any) {
+            updateScore(10);
+            triggerConfetti();
+            // Use whichever rule actually worked for the display
+            currentFamily.a = f.a; currentFamily.b = f.b; currentFamily.c = f.c;
+            currentFamily.intendedType = rules.isMult ? '×' : '+';
+            currentFamily.intendedInv = rules.isMult ? '÷' : '-';
+            showOverlay();
+        } else fail();
+    }
+
+    function checkHunt(playerSaysReal) {
+        const rules = getValidRules(currentFamily.a, currentFamily.b, currentFamily.c);
+        if (playerSaysReal === rules.any) {
+            updateScore(15);
+            triggerConfetti();
+            if (rules.any) {
+                currentFamily.intendedType = rules.isMult ? '×' : '+';
+                currentFamily.intendedInv = rules.isMult ? '÷' : '-';
+                showOverlay();
+            }
+            else {
+                document.getElementById('game-container').classList.add('correct-pulse');
+                setTimeout(newRound, 600);
+            }
+        } else fail();
+    }
+
+    function checkOp(chosenOp) { 
+        const rules = getValidRules(currentFamily.a, currentFamily.b, currentFamily.c);
+        const correct = (chosenOp === '+' && rules.isAdd) || (chosenOp === '×' && rules.isMult);
+        
+        if (correct) {
+            updateScore(10);
+            currentFamily.intendedType = chosenOp === '+' ? '+' : '×';
+            currentFamily.intendedInv = chosenOp === '+' ? '-' : '÷';
+            triggerConfetti();
+            showOverlay();
+        } else fail(); 
+    }
+
+    function showOverlay() {
+        const {a, b, c, intendedType, intendedInv} = currentFamily;
+        const display = document.getElementById('equation-display');
+        display.innerHTML = `
+            <div class="equation-col">
+                <div>${a} ${intendedType} ${b} = ${c}</div>
+                <div>${b} ${intendedType} ${a} = ${c}</div>
+            </div>
+            <div class="equation-col">
+                <div>${c} ${intendedInv} ${a} = ${b}</div>
+                <div>${c} ${intendedInv} ${b} = ${a}</div>
+            </div>
+        `;
+        document.getElementById('success-overlay').style.display = 'flex';
+    }
+
+    function fail() {
+        document.getElementById('game-container').classList.add('shake');
+        setTimeout(() => document.getElementById('game-container').classList.remove('shake'), 500);
+    }
+
+    window.addEventListener('keydown', (e) => { if (e.key === 'Enter' && currentMode === 'FILL') checkAnswer(); });
+    newRound();
+</script>
+</body>
+</html>
