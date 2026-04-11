@@ -35,10 +35,10 @@ function animalImageURL(filename) {
 const GROWTH_MESSAGES_SOURCE = [
   // Progress & effort
   "I'm making progress!",
-  "I'm learning!",
+  "I'll use my Aikido on you: Math!",
   'Hard work is how brains grow!',
-  'Every problem I solve makes me stronger.',
-  "I didn't know this before — now I do!",
+  'My brain isnt lost; it just took an interesting route.',
+  "My brain called, it said it's working on it!",
   'Practice is making this easier.',
   "I'm getting better every single round.",
   'Each answer teaches me something.',
@@ -54,28 +54,28 @@ const GROWTH_MESSAGES_SOURCE = [
   'Trying again is a superpower.',
   'I worked through something tricky today.',
   'Struggle means my brain is growing.',
-  'I got it wrong, then I got it right.',
+  'I have outsmarted harder things than you. Math.',
   // Confidence & identity
   'I am a math learner!',
   'My brain gets stronger when I practice.',
   'I can do hard things.',
   "I'm the kind of person who keeps trying.",
   "Smart isn't something you are — it's something you build.",
-  'I earned this!',
+  'No half blood ever got slayed by a math problem.',
   'Look how far I’ve come!',
   "I'm building something real in my brain.",
-  "I'm proud of myself.",
+  "Plot twist: I enjoy hard things now.",
   'This is what learning feels like!',
   // Curiosity & wonder
   'Math is full of cool patterns!',
   'I love finding how numbers connect.',
   'Numbers make sense when I look closely.',
   "There's always a way through.",
-  "I wonder what I'll learn next!",
+  "Mistakes are just answers wearing a costume.",
   'Every problem is a little puzzle.',
   "Math is a language I'm learning to speak.",
   'I see the pattern now!',
-  'This clicked — and that feels great.',
+  'I tried my best, and my best said: hold on a second.',
   'Curiosity is my best tool.'
 ];
 
