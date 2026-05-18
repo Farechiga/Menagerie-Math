@@ -89,6 +89,9 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  /* Stop rubber-band scroll from chaining into the page and stalling
+     touch handling on iOS Safari. */
+  overscroll-behavior-y: contain;
 }
 
 body {
@@ -100,22 +103,37 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 
-  /* Animated chromatic white-gradient color underneath the SVG overlay. */
   background-color: #E2F7F7;
-  animation: chromatic-shift 30s ease-in-out infinite;
-  /* Establish a stacking context so body::before with z-index:-1 layers
+  /* Establish a stacking context so the pseudo-element layers below sit
      above the body background but below all page content. */
   isolation: isolate;
 }
 
-/* Iridescent SVG overlay — sits above the animated chromatic background-color
-   and below every page element. Opacity tuned to keep the colors gentle. */
+/* Animated chromatic backdrop. Pinned to a fixed pseudo-element on its own
+   compositor layer (transform: translateZ(0)) so the per-frame paint stays
+   off the scroll container — animating background-color on <body> stuttered
+   mobile scrolling on iOS Safari. */
 body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-color: #E2F7F7;
+  animation: chromatic-shift 30s ease-in-out infinite;
+  transform: translateZ(0);
+  will-change: background-color;
+  pointer-events: none;
+  z-index: -2;
+}
+
+/* Iridescent SVG overlay — sits above the chromatic layer and below every
+   page element. Promoted to its own GPU layer for the same reason. */
+body::after {
   content: '';
   position: fixed;
   inset: 0;
   background: url('../assets/BackgroundScreen/screen.svg') center / cover no-repeat;
   opacity: 0.5;
+  transform: translateZ(0);
   pointer-events: none;
   z-index: -1;
 }
@@ -199,7 +217,6 @@ a:hover { text-decoration: underline; }
 .pulse { animation: pulse 1.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  body { animation: none; }
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
