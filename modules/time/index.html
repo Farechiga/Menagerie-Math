@@ -397,21 +397,39 @@
       return variants[Math.floor(Math.random() * variants.length)];
     }
 
+    // ---------- Whimsical event pool ----------
+    // Every scenario-style prompt (Types C, D, E) draws its event name here.
+    const EVENTS = [
+      'The water balloon fight',
+      'The Chickadee opera',
+      'The Highland cow ballet',
+      'The arctic fox parade',
+      'The penguin cooking contest',
+      'The hedgehog fashion show',
+      'The otter gymnastics finals',
+      'The capybara film festival',
+      'The salamander spelling bee',
+      'The marmot talent show',
+      'The narwhal poetry reading',
+      'The blobfish beauty pageant',
+      'The wombat jazz concert',
+      'The axolotl science fair',
+      'The quokka dance recital'
+    ];
+    const pickEvent = () => EVENTS[Math.floor(Math.random() * EVENTS.length)];
+
     // ---------- Type C scenarios ----------
     const SCENARIOS = [
-      'School starts at {time} — how many minutes until school starts?',
-      'Lunch is at {time} — how many minutes until lunch?',
-      'Recess starts at {time} — how many minutes until recess?',
-      'Your show starts at {time} — how many minutes until it starts?',
-      'Practice starts at {time} — how many minutes until practice?'
+      '{event} starts at {time} — how many minutes until it begins?',
+      '{event} starts at {time} — how many minutes until it starts?'
     ];
     function pickScenario(endTime) {
       const tpl = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
-      return tpl.replace('{time}', formatTime(endTime));
+      return tpl.replace('{event}', pickEvent()).replace('{time}', formatTime(endTime));
     }
 
     // Work backwards from a clean end time:
-    //   1. End hour ∈ {8, 9, 10, 11, 12, 1, 2, 3}  (school-day range)
+    //   1. End hour ∈ {8, 9, 10, 11, 12, 1, 2, 3}  (daytime hours)
     //   2. End minute ∈ {0, 30}                    (on the hour or half hour)
     //   3. Elapsed ∈ {5, 10, …, 55}                (multiple of 5, max 55)
     //   4. Start = end − elapsed (borrow an hour if start minute goes negative)
@@ -433,14 +451,61 @@
       return { start, diff, scenario: pickScenario(end) };
     }
 
+    // ---------- Type D: starts in X minutes (reverse elapsed) ----------
+    // The clock shows the current time. The event starts a multiple of 5
+    // minutes later (5..55); the answer always stays within the same hour.
+    function generateTypeD() {
+      const diff = (Math.floor(Math.random() * 11) + 1) * 5; // 5..55
+      const minuteChoices = [];
+      for (let m = 0; m + diff <= 55; m += 5) minuteChoices.push(m);
+      const minute = minuteChoices[Math.floor(Math.random() * minuteChoices.length)];
+      const hour = Math.floor(Math.random() * 12) + 1;
+      const current = { hour, minute };
+      const answer = { hour, minute: minute + diff };
+      const scenario = `${pickEvent()} starts in ${diff} minutes — what time does it start?`;
+      return { current, answer, scenario };
+    }
+
+    // ---------- Type E: arrival time with buffer ----------
+    // The event starts on the hour or half hour; subtract a 5/10/15/20-minute
+    // buffer to find the arrival/leave time (borrow an hour if needed).
+    const TYPE_E_TEMPLATES = [
+      '{event} starts at {time}, but we need {buffer} minutes to park — what time should we arrive?',
+      '{event} starts at {time}, but it takes {buffer} minutes to get there — what time should we leave?',
+      '{event} starts at {time}, but we need {buffer} minutes to find our seats — what time should we arrive?'
+    ];
+    function generateTypeE() {
+      const buffer = [5, 10, 15, 20][Math.floor(Math.random() * 4)];
+      const startHour = Math.floor(Math.random() * 12) + 1;
+      const startMinute = Math.random() < 0.5 ? 0 : 30;
+      const start = { hour: startHour, minute: startMinute };
+
+      let aMinute = startMinute - buffer;
+      let aHour = startHour;
+      if (aMinute < 0) {
+        aMinute += 60;
+        aHour = (aHour === 1) ? 12 : aHour - 1;
+      }
+      const answer = { hour: aHour, minute: aMinute };
+
+      const tpl = TYPE_E_TEMPLATES[Math.floor(Math.random() * TYPE_E_TEMPLATES.length)];
+      const scenario = tpl
+        .replace('{event}', pickEvent())
+        .replace('{time}', formatTime(start))
+        .replace('{buffer}', buffer);
+      return { start, answer, scenario };
+    }
+
     // ---------- Round state ----------
     let currentRound = null;
 
     function pickType() {
       const r = Math.random();
-      if (r < 0.35) return 'A';
-      if (r < 0.70) return 'B';
-      return 'C';
+      if (r < 0.25) return 'A';   // read and type      — 25%
+      if (r < 0.50) return 'B';   // set the hands      — 25%
+      if (r < 0.70) return 'C';   // elapsed minutes    — 20%
+      if (r < 0.85) return 'D';   // starts in X minutes — 15%
+      return 'E';                 // arrival buffer     — 15%
     }
 
     function setReadoutVisible(vis) {
@@ -487,20 +552,34 @@
         svg.classList.add('interactive');
         updateReadout(display);
         setReadoutVisible(true);
-      } else {
+      } else if (type === 'C') {
         const { start, diff, scenario } = generateTypeC();
         currentRound = { type, target: diff, display: start, scenario };
         setPrompt(scenario);
         answerInput.placeholder = 'minutes';
         answerInput.classList.remove('hidden');
         timeEntry.classList.add('hidden');
+      } else if (type === 'D') {
+        // Clock shows the current time; child types when the event starts.
+        const { current, answer, scenario } = generateTypeD();
+        currentRound = { type, target: answer, display: current };
+        setPrompt(scenario);
+        answerInput.classList.add('hidden');
+        timeEntry.classList.remove('hidden');
+      } else { // type E
+        // Clock shows the event start time; child types the arrival time.
+        const { start, answer, scenario } = generateTypeE();
+        currentRound = { type, target: answer, display: start };
+        setPrompt(scenario);
+        answerInput.classList.add('hidden');
+        timeEntry.classList.remove('hidden');
       }
 
       updateHands(currentRound.display);
 
       // Focus the first active input
       setTimeout(() => {
-        if (type === 'A') hoursInput.focus();
+        if (type === 'A' || type === 'D' || type === 'E') hoursInput.focus();
         else if (type === 'C') answerInput.focus();
       }, 0);
     }
@@ -598,7 +677,7 @@
 
       // Keep inputs live so the child can adjust and try again on the
       // same round. Do not auto-advance, do not reveal the answer.
-      if (currentRound.type === 'A') {
+      if (currentRound.type === 'A' || currentRound.type === 'D' || currentRound.type === 'E') {
         const hoursInput = document.getElementById('hours-input');
         hoursInput.focus();
         hoursInput.select();
@@ -613,7 +692,9 @@
     function submit() {
       if (!currentRound) return;
 
-      if (currentRound.type === 'A') {
+      // Types A, D and E all collect an H:MM answer via the time-entry fields
+      // and compare it against currentRound.target.
+      if (currentRound.type === 'A' || currentRound.type === 'D' || currentRound.type === 'E') {
         const hRaw = document.getElementById('hours-input').value.trim();
         const mRaw = document.getElementById('minutes-input').value.trim();
         if (hRaw === '' || mRaw === '') return;

@@ -307,6 +307,7 @@
 
           <div class="drop-zone" id="drop-zone">
             <div class="drop-zone__label">Drag coins here</div>
+            <div class="running-total" id="running-total">0¢</div>
             <div class="drop-zone__coins" id="drop-zone-coins"></div>
           </div>
 
@@ -420,18 +421,22 @@
 
     // ---------- Sub-game A: Exact change ----------
     function generateSubgameA() {
-      // Price: multiple of 5¢, 5¢..95¢
+      // Price: multiple of 5¢, from 5¢ up to $1.95
       const priceOptions = [];
-      for (let p = 5; p <= 95; p += 5) priceOptions.push(p);
+      for (let p = 5; p <= 195; p += 5) priceOptions.push(p);
       const price = priceOptions[Math.floor(Math.random() * priceOptions.length)];
 
+      // Greedy gives the fewest-coin exact-change set (quarters first), so
+      // there is only one way to make the price with the needed coins.
       const needed = greedyCoins(price);
 
-      // Add 3–5 decoys of random denominations
-      const decoyCount = 3 + Math.floor(Math.random() * 3);
+      // Decoys are 3–4 coins of denominations NOT used in the exact set.
+      const neededDenoms = new Set(needed);
+      const decoyPool = COIN_ORDER.filter((d) => !neededDenoms.has(d));
+      const decoyCount = 3 + Math.floor(Math.random() * 2); // 3..4
       const decoys = [];
       for (let i = 0; i < decoyCount; i++) {
-        decoys.push(COIN_ORDER[Math.floor(Math.random() * COIN_ORDER.length)]);
+        decoys.push(decoyPool[Math.floor(Math.random() * decoyPool.length)]);
       }
 
       const trayDenoms = shuffle(needed.concat(decoys));
@@ -474,9 +479,26 @@
       return img;
     }
 
-    // Running total is intentionally not displayed — the child adds coins
-    // up in her head and submits when she thinks it matches the price.
-    function updateRunningTotal() { /* no-op */ }
+    // Format a running total against the target price. Prices of $1.00 or
+    // more show as dollars and cents ($0.75 / $1.35); smaller prices stay in
+    // cents (75¢ / 95¢).
+    function formatRunningTotal(running, price) {
+      if (price >= 100) {
+        return `$${(running / 100).toFixed(2)} / $${(price / 100).toFixed(2)}`;
+      }
+      return `${running}¢ / ${price}¢`;
+    }
+
+    // Show the running total in the drop zone, turning green on an exact match.
+    function updateRunningTotal() {
+      if (!currentRound || currentRound.type !== 'A') return;
+      const coins = document.getElementById('drop-zone-coins').querySelectorAll('.coin');
+      let total = 0;
+      coins.forEach((c) => { total += parseInt(c.dataset.value, 10); });
+      const el = document.getElementById('running-total');
+      el.textContent = formatRunningTotal(total, currentRound.price);
+      el.classList.toggle('match', total === currentRound.price);
+    }
 
     function attachCoinInteraction(coin) {
       coin.addEventListener('pointerdown', function (e) {
@@ -572,10 +594,10 @@
     // ---------- Sub-game B: Which can I afford? ----------
 
     // Build a wallet of 3–6 random coins (Quarters/Dimes/Nickels only so the
-    // total stays a multiple of 5¢) with a total in [15, 80]. Weighted pool
-    // favors Dimes/Nickels for visual variety at the mid range.
+    // total stays a multiple of 5¢) with a total in [15, 195]. The quarter-
+    // heavy pool lets the total climb past $1.00.
     function buildWallet() {
-      const pool = ['Quarter', 'Dime', 'Dime', 'Nickel', 'Nickel'];
+      const pool = ['Quarter', 'Quarter', 'Dime', 'Dime', 'Nickel'];
       for (let attempts = 0; attempts < 30; attempts++) {
         const count = 3 + Math.floor(Math.random() * 4); // 3..6
         const coins = [];
@@ -585,7 +607,7 @@
           coins.push(d);
           total += COIN_VALUES[d];
         }
-        if (total >= 15 && total <= 80) return { coins, total };
+        if (total >= 15 && total <= 195) return { coins, total };
       }
       return { coins: ['Quarter', 'Dime', 'Nickel'], total: 40 };
     }
@@ -599,7 +621,7 @@
       // Candidate distractors: 5¢ multiples in [5, 95] within 30¢ of `correct`,
       // excluding `correct` itself.
       const lo = Math.max(5, correct - 30);
-      const hi = Math.min(95, correct + 30);
+      const hi = Math.min(195, correct + 30);
       const candidates = [];
       for (let p = lo; p <= hi; p += 5) {
         if (p !== correct) candidates.push(p);
@@ -618,7 +640,7 @@
 
       // Fallback: correct ± 5¢ and correct + 10¢ (clamped)
       const minus5 = Math.max(5, correct - 5);
-      const plus10 = Math.min(95, correct + 10);
+      const plus10 = Math.min(195, correct + 10);
       return shuffle([correct, minus5 === correct ? correct + 5 : minus5, plus10 === correct ? correct + 15 : plus10]);
     }
 
