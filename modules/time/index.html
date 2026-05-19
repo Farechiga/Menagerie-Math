@@ -110,8 +110,9 @@
       width: 300px;
       height: 300px;
       max-width: 100%;
-      touch-action: none;
       user-select: none;
+      /* No touch-action here: a touch on the clock face must still scroll
+         the page. Only the draggable hands claim the touch (see below). */
     }
     #clock-svg .clock-face {
       fill: var(--white);
@@ -130,13 +131,30 @@
     }
     #clock-svg .hand-hour  { stroke: var(--magenta); stroke-width: 8; stroke-linecap: round; }
     #clock-svg .hand-minute{ stroke: var(--teal);    stroke-width: 4; stroke-linecap: round; }
+    /* Decorative SVG parts ignore pointer/touch input, so touches on them
+       pass straight through to the page scroller. */
+    #clock-svg .clock-face,
+    #clock-svg .tick,
+    #clock-svg .numeral,
+    #clock-svg .center-dot,
+    #clock-svg .hand-hour,
+    #clock-svg .hand-minute {
+      pointer-events: none;
+    }
     #clock-svg .hand-hit {
       stroke: transparent;
       stroke-width: 26;
       stroke-linecap: round;
       cursor: default;
+      pointer-events: stroke;
     }
-    #clock-svg.interactive .hand-hit { cursor: grab; }
+    /* Only the hands, and only while the clock is interactive, opt out of
+       native touch gestures — so dragging works but the rest of the clock
+       (and the whole page) still scrolls normally. */
+    #clock-svg.interactive .hand-hit {
+      cursor: grab;
+      touch-action: none;
+    }
     #clock-svg.interactive .hand-hit:active { cursor: grabbing; }
     #clock-svg .center-dot { fill: var(--ink); }
 
@@ -743,9 +761,12 @@
     }
 
     // ---------- Draggable hands (type B) ----------
+    // Each hand owns its own pointer listeners and captures the pointer on
+    // press, so a drag is fully contained: it never leaks to the document and
+    // never blocks page scrolling. Only a finger directly on a hand (while the
+    // clock is interactive) is intercepted — everything else scrolls natively.
     function setupDraggableHands() {
       const svg = document.getElementById('clock-svg');
-      let activeHand = null;
 
       function getAngle(e) {
         const rect = svg.getBoundingClientRect();
@@ -758,18 +779,8 @@
         return deg;
       }
 
-      function onDown(hand, e) {
-        if (!svg.classList.contains('interactive')) return;
-        if (!currentRound || currentRound.type !== 'B') return;
-        activeHand = hand;
-        e.preventDefault();
-        try { svg.setPointerCapture && svg.setPointerCapture(e.pointerId); } catch (_) {}
-      }
-
-      function onMove(e) {
-        if (!activeHand || !currentRound) return;
-        const deg = getAngle(e);
-        if (activeHand === 'minute') {
+      function moveHand(hand, deg) {
+        if (hand === 'minute') {
           currentRound.display.minute = Math.round(deg / 6) % 60;
         } else {
           const currentMin = currentRound.display.minute;
@@ -782,13 +793,37 @@
         updateReadout(currentRound.display);
       }
 
-      function onUp() { activeHand = null; }
+      function makeDraggable(hitId, hand) {
+        const el = document.getElementById(hitId);
+        let dragging = false;
 
-      document.getElementById('hour-hand-hit').addEventListener('pointerdown', (e) => onDown('hour', e));
-      document.getElementById('minute-hand-hit').addEventListener('pointerdown', (e) => onDown('minute', e));
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
-      document.addEventListener('pointercancel', onUp);
+        el.addEventListener('pointerdown', function (e) {
+          // Ignore unless the clock is in "set the hands" mode; otherwise the
+          // touch is left untouched so it can scroll the page.
+          if (!svg.classList.contains('interactive')) return;
+          if (!currentRound || currentRound.type !== 'B') return;
+          dragging = true;
+          try { el.setPointerCapture(e.pointerId); } catch (_) {}
+          // preventDefault only here — i.e. only once a real hand drag begins.
+          e.preventDefault();
+        });
+
+        el.addEventListener('pointermove', function (e) {
+          if (!dragging || !currentRound) return;
+          moveHand(hand, getAngle(e));
+        });
+
+        function endDrag(e) {
+          if (!dragging) return;
+          dragging = false;
+          try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+        el.addEventListener('pointerup', endDrag);
+        el.addEventListener('pointercancel', endDrag);
+      }
+
+      makeDraggable('hour-hand-hit', 'hour');
+      makeDraggable('minute-hand-hit', 'minute');
     }
 
     // ---------- Wire up ----------
