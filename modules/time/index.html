@@ -111,8 +111,11 @@
       height: 300px;
       max-width: 100%;
       user-select: none;
-      /* No touch-action here: a touch on the clock face must still scroll
-         the page. Only the draggable hands claim the touch (see below). */
+      /* The clock owns every touch inside its 300x300 box: hand drags work
+         reliably and never fight the page scroll. touch-action on SVG *child*
+         elements is not honored across browsers, so it must live on the root.
+         Everywhere outside this box, the page scrolls normally. */
+      touch-action: none;
     }
     #clock-svg .clock-face {
       fill: var(--white);
@@ -131,8 +134,8 @@
     }
     #clock-svg .hand-hour  { stroke: var(--magenta); stroke-width: 8; stroke-linecap: round; }
     #clock-svg .hand-minute{ stroke: var(--teal);    stroke-width: 4; stroke-linecap: round; }
-    /* Decorative SVG parts ignore pointer/touch input, so touches on them
-       pass straight through to the page scroller. */
+    /* Decorative SVG parts ignore pointer input so they never compete with
+       the hands for touches; only the hands are interactive. */
     #clock-svg .clock-face,
     #clock-svg .tick,
     #clock-svg .numeral,
@@ -146,16 +149,19 @@
       stroke-width: 26;
       stroke-linecap: round;
       cursor: default;
-      pointer-events: stroke;
+      pointer-events: all;
     }
-    /* Only the hands, and only while the clock is interactive, opt out of
-       native touch gestures — so dragging works but the rest of the clock
-       (and the whole page) still scrolls normally. */
-    #clock-svg.interactive .hand-hit {
-      cursor: grab;
-      touch-action: none;
+    /* Finger-sized transparent grab target on each hand's tip — gives a
+       comfortable touch area without changing how the hand looks. */
+    #clock-svg .hand-grip {
+      fill: transparent;
+      pointer-events: all;
+      cursor: default;
     }
-    #clock-svg.interactive .hand-hit:active { cursor: grabbing; }
+    #clock-svg.interactive .hand-hit,
+    #clock-svg.interactive .hand-grip { cursor: grab; }
+    #clock-svg.interactive .hand-hit:active,
+    #clock-svg.interactive .hand-grip:active { cursor: grabbing; }
     #clock-svg .center-dot { fill: var(--ink); }
 
     .answer-area {
@@ -228,6 +234,9 @@
             <line id="minute-hand"     class="hand-minute" x1="150" y1="150" x2="150" y2="40"  transform="rotate(0 150 150)"/>
             <line id="minute-hand-hit" class="hand-hit"    x1="150" y1="150" x2="150" y2="40"  transform="rotate(0 150 150)"/>
             <circle class="center-dot" cx="150" cy="150" r="7"/>
+            <!-- Finger-sized invisible grab targets on the hand tips -->
+            <circle id="hour-hand-grip"   class="hand-grip" cx="150" cy="85" r="22" transform="rotate(0 150 150)"/>
+            <circle id="minute-hand-grip" class="hand-grip" cx="150" cy="40" r="22" transform="rotate(0 150 150)"/>
           </svg>
         </div>
 
@@ -345,8 +354,10 @@
       const minAngle  = m * 6;
       document.getElementById('hour-hand').setAttribute('transform', `rotate(${hourAngle} 150 150)`);
       document.getElementById('hour-hand-hit').setAttribute('transform', `rotate(${hourAngle} 150 150)`);
+      document.getElementById('hour-hand-grip').setAttribute('transform', `rotate(${hourAngle} 150 150)`);
       document.getElementById('minute-hand').setAttribute('transform', `rotate(${minAngle} 150 150)`);
       document.getElementById('minute-hand-hit').setAttribute('transform', `rotate(${minAngle} 150 150)`);
+      document.getElementById('minute-hand-grip').setAttribute('transform', `rotate(${minAngle} 150 150)`);
     }
 
     // ---------- Time generation ----------
@@ -823,7 +834,9 @@
       }
 
       makeDraggable('hour-hand-hit', 'hour');
+      makeDraggable('hour-hand-grip', 'hour');
       makeDraggable('minute-hand-hit', 'minute');
+      makeDraggable('minute-hand-grip', 'minute');
     }
 
     // ---------- Wire up ----------
