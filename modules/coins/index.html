@@ -238,15 +238,14 @@
       transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
       font-family: inherit;
     }
-    /* Hover lift only on devices with a real pointer. On a touchscreen the
-       :hover state sticks after a tap, which made a card look pre-selected
-       on the next round — gating it behind hover:hover removes that. */
-    @media (hover: hover) {
-      .card-option:hover {
-        transform: translateY(-4px);
-        border-color: var(--magenta);
-        box-shadow: var(--shadow-md);
-      }
+    /* Answer cards never carry a passive highlight — no hover lift and no
+       focus glow (the global :focus-visible rule would otherwise paint a
+       magenta glow on a focused card). Every card looks identical until the
+       child actually taps one, so none looks pre-selected. */
+    .card-option:focus,
+    .card-option:focus-visible {
+      outline: none;
+      box-shadow: none;
     }
     .card-option:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
     .card-option__frame {
