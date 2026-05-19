@@ -406,7 +406,7 @@
       'The 41st Arctic Fox Floral Sculpture Parade',
       'The Penguin Pastry Chef Souffle Final',
       'The Hedgehog Haute Couture in Tech Hackathon',
-      'The otter rhythmic gymnastics quarter finals',
+      'The Otter Rhythmic Gymnastics Quarter Finals',
       'The Young Capybara Directors 3rd Annual Film Festival',
       'The Salamander Audiologist Association Spelling Bee Semifinals',
       'The Marmots of Western Massachusetts Fall Talent Show',
@@ -414,9 +414,31 @@
       'The Pygmy Hippo Beauty Contest',
       'The Wombat Jazz Trio at the Pixar Convention Closing Gala',
       'The Axolotl Citizen Science Expo',
-      'The Quokka Break Squad Spring Dance Recital'
+      'The Quokka Break Squad Spring Dance Recital',
+      'The Tiny Humans of Wild Rumpus live reading of Shakespeare',
+      'The Amateur Butter Sculpting and Tasting Committee meeting',
+      'The Polar Bear Mathlete Meetup',
+      'The Percy Jackson Reenactment Society Luncheon',
+      'The Monthly Orangutans for Jane Austen Boba and Books Club meeting',
+      'The Advanced Canva and Koala Cuddle Club bakesale',
+      'The Marsupial Birding Enthusiast Society outing',
+      'The West Fish Lake Junior Data Collective hike'
     ];
-    const pickEvent = () => EVENTS[Math.floor(Math.random() * EVENTS.length)];
+
+    // Draw events without repeats: consume a shuffled queue, refilling only
+    // once every event has been used — so no title repeats within a session
+    // (a session uses far fewer rounds than the pool has events).
+    let eventQueue = [];
+    function pickEvent() {
+      if (eventQueue.length === 0) {
+        eventQueue = EVENTS.slice();
+        for (let i = eventQueue.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [eventQueue[i], eventQueue[j]] = [eventQueue[j], eventQueue[i]];
+        }
+      }
+      return eventQueue.pop();
+    }
 
     // ---------- Type C scenarios ----------
     const SCENARIOS = [
