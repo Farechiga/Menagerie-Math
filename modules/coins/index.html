@@ -607,11 +607,11 @@
 
     // Generate three distinct card prices — exactly one equals walletTotal
     // (the card the child can afford), plus two distractors. All are 5¢
-    // multiples and every pair is at least 20¢ apart, so the choice is
-    // meaningful without being trivially obvious.
+    // multiples and each pair is only 5–15¢ apart, so the prices sit close
+    // together and the child has to count carefully to tell them apart.
     function generateSubgameBPrices(walletTotal) {
       const correct = walletTotal;
-      const GAPS = [20, 25, 30, 35];
+      const GAPS = [5, 10, 15];
       const randGap = () => GAPS[Math.floor(Math.random() * GAPS.length)];
       const inRange = (p) => p >= 5 && p <= 195;
 
@@ -627,9 +627,9 @@
         if (prices.every(inRange)) return shuffle(prices);
       }
 
-      // Fallback: stack two 20¢ gaps in whichever direction stays in range.
-      if (correct + 40 <= 195) return shuffle([correct, correct + 20, correct + 40]);
-      return shuffle([correct - 40, correct - 20, correct]);
+      // Fallback: stack two 10¢ gaps in whichever direction stays in range.
+      if (correct + 20 <= 195) return shuffle([correct, correct + 10, correct + 20]);
+      return shuffle([correct - 20, correct - 10, correct]);
     }
 
     // Three random images from the full manifest (display only — the card

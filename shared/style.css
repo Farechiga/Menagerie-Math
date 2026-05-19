@@ -365,6 +365,9 @@ a:hover { text-decoration: underline; }
   padding: var(--space-5);
   z-index: 100;
   animation: fade-in-up 200ms ease both;
+  /* A popup is a sealed touch zone: touches on the backdrop never scroll,
+     pan, or drag the page behind it. The .modal itself stays scrollable. */
+  touch-action: none;
 }
 
 .modal {
@@ -375,6 +378,9 @@ a:hover { text-decoration: underline; }
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  /* Keep the modal's own scroll contained — it never chains out to the
+     page, so the background can't move while the popup is open. */
+  overscroll-behavior: contain;
   box-shadow: var(--shadow-lg);
   text-align: center;
   animation: pop-in 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
