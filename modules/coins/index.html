@@ -348,9 +348,11 @@
     const MODULE_KEY = 'coins';
     const GOAL = 10;
 
-    const COIN_VALUES = { Quarter: 25, Dime: 10, Nickel: 5, Penny: 1 };
-    const COIN_SIZES  = { Quarter: 64, Dime: 47, Nickel: 56, Penny: 50 };
-    const COIN_ORDER  = ['Quarter', 'Dime', 'Nickel', 'Penny'];
+    // Pennies are out of circulation — the game uses 5¢ coins and up only,
+    // so every price and total is a multiple of 5¢.
+    const COIN_VALUES = { Quarter: 25, Dime: 10, Nickel: 5 };
+    const COIN_SIZES  = { Quarter: 64, Dime: 47, Nickel: 56 };
+    const COIN_ORDER  = ['Quarter', 'Dime', 'Nickel'];
 
     // ---------- Asset helpers ----------
     function coinImageSrc(denom) {
@@ -377,16 +379,19 @@
       return a;
     }
 
-    function greedyCoins(cents) {
-      const out = [];
-      let remaining = cents;
-      for (const d of COIN_ORDER) {
-        while (remaining >= COIN_VALUES[d]) {
-          out.push(d);
-          remaining -= COIN_VALUES[d];
-        }
-      }
-      return out;
+    // Build a generous, roughly balanced coin tray for a Sub-game A price.
+    // It always holds enough quarters/dimes/nickels to make the price several
+    // different ways, plus spare decoys. Any combination that sums to the
+    // price is accepted — deciding how to compose it is the learning.
+    function buildTrayDenoms(price) {
+      const quarters = Math.max(3, Math.floor(price / 25) + 1) + Math.floor(Math.random() * 2);
+      const dimes    = 4 + Math.floor(Math.random() * 2); // 4–5
+      const nickels  = 5 + Math.floor(Math.random() * 2); // 5–6
+      const denoms = [];
+      for (let i = 0; i < quarters; i++) denoms.push('Quarter');
+      for (let i = 0; i < dimes; i++)    denoms.push('Dime');
+      for (let i = 0; i < nickels; i++)  denoms.push('Nickel');
+      return shuffle(denoms);
     }
 
     function pickCards(n) {
@@ -426,20 +431,8 @@
       for (let p = 5; p <= 195; p += 5) priceOptions.push(p);
       const price = priceOptions[Math.floor(Math.random() * priceOptions.length)];
 
-      // Greedy gives the fewest-coin exact-change set (quarters first), so
-      // there is only one way to make the price with the needed coins.
-      const needed = greedyCoins(price);
-
-      // Decoys are 3–4 coins of denominations NOT used in the exact set.
-      const neededDenoms = new Set(needed);
-      const decoyPool = COIN_ORDER.filter((d) => !neededDenoms.has(d));
-      const decoyCount = 3 + Math.floor(Math.random() * 2); // 3..4
-      const decoys = [];
-      for (let i = 0; i < decoyCount; i++) {
-        decoys.push(decoyPool[Math.floor(Math.random() * decoyPool.length)]);
-      }
-
-      const trayDenoms = shuffle(needed.concat(decoys));
+      // Generous, varied tray — any combination summing to the price works.
+      const trayDenoms = buildTrayDenoms(price);
       const animal = pickCards(1)[0];
 
       currentRound = { type: 'A', price, animal, trayDenoms };
@@ -612,36 +605,31 @@
       return { coins: ['Quarter', 'Dime', 'Nickel'], total: 40 };
     }
 
-    // Generate three prices: exactly one equal to walletTotal (the card the
-    // child has exactly enough for), plus two distractor prices. All prices
-    // are 5¢ multiples. Group spread (max - min) ≤ 30¢. All distinct.
+    // Generate three distinct card prices — exactly one equals walletTotal
+    // (the card the child can afford), plus two distractors. All are 5¢
+    // multiples and every pair is at least 20¢ apart, so the choice is
+    // meaningful without being trivially obvious.
     function generateSubgameBPrices(walletTotal) {
       const correct = walletTotal;
+      const GAPS = [20, 25, 30, 35];
+      const randGap = () => GAPS[Math.floor(Math.random() * GAPS.length)];
+      const inRange = (p) => p >= 5 && p <= 195;
 
-      // Candidate distractors: 5¢ multiples in [5, 95] within 30¢ of `correct`,
-      // excluding `correct` itself.
-      const lo = Math.max(5, correct - 30);
-      const hi = Math.min(195, correct + 30);
-      const candidates = [];
-      for (let p = lo; p <= hi; p += 5) {
-        if (p !== correct) candidates.push(p);
+      for (let attempts = 0; attempts < 200; attempts++) {
+        const g1 = randGap();
+        const g2 = randGap();
+        let prices;
+        switch (Math.floor(Math.random() * 3)) {
+          case 0:  prices = [correct - g1, correct, correct + g2]; break;       // correct in the middle
+          case 1:  prices = [correct, correct + g1, correct + g1 + g2]; break;  // correct lowest
+          default: prices = [correct - g1 - g2, correct - g1, correct];         // correct highest
+        }
+        if (prices.every(inRange)) return shuffle(prices);
       }
 
-      for (let attempts = 0; attempts < 80; attempts++) {
-        const pool = shuffle(candidates);
-        const a = pool[0];
-        const b = pool[1];
-        if (a === undefined || b === undefined) break;
-        const group = [correct, a, b];
-        const gMin = Math.min(correct, a, b);
-        const gMax = Math.max(correct, a, b);
-        if (gMax - gMin <= 30) return shuffle(group);
-      }
-
-      // Fallback: correct ± 5¢ and correct + 10¢ (clamped)
-      const minus5 = Math.max(5, correct - 5);
-      const plus10 = Math.min(195, correct + 10);
-      return shuffle([correct, minus5 === correct ? correct + 5 : minus5, plus10 === correct ? correct + 15 : plus10]);
+      // Fallback: stack two 20¢ gaps in whichever direction stays in range.
+      if (correct + 40 <= 195) return shuffle([correct, correct + 20, correct + 40]);
+      return shuffle([correct - 40, correct - 20, correct]);
     }
 
     // Three random images from the full manifest (display only — the card
